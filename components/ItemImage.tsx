@@ -1,44 +1,33 @@
 import React from 'react';
 
-export default function ItemImage({ 
-  itemID, 
-  name, 
-  className, 
-  customOffset 
-}: { 
-  itemID: number, 
-  name: string, 
-  className?: string,
-  // Tambahkan opsional customOffset untuk override jika ID tidak sinkron dengan grid
-  customOffset?: { x: number, y: number } 
-}) {
-  const isSeed = itemID % 2 !== 0;
-  const sheetIndex = Math.floor(itemID / 2);
-  
-  const COLUMNS = 66; 
+export default function ItemImage({ itemID, name, className }: { itemID: number, name: string, className?: string }) {
+  // 1. Sesuaikan dengan dimensi sprite kamu
+  const COLUMNS = 66; // 2112 / 32 = 66
   const SPRITE_SIZE = 32;
 
-  // Jika customOffset diberikan, gunakan itu. Jika tidak, pakai kalkulasi grid.
-  const col = customOffset ? customOffset.x / SPRITE_SIZE : sheetIndex % COLUMNS;
-  const row = customOffset ? customOffset.y / SPRITE_SIZE : Math.floor(sheetIndex / COLUMNS);
+  // 2. Hitung posisi koordinat
+  const col = itemID % COLUMNS;
+  const row = Math.floor(itemID / COLUMNS);
 
   const xOffset = col * SPRITE_SIZE;
   const yOffset = row * SPRITE_SIZE;
 
-  const sheetUrl = isSeed ? '/SeedSprites.png' : '/ItemSprites.png';
+  // 3. Tentukan file (Ganjil = Seed, Genap = Block)
+  // Berdasarkan catatanmu: ID 0=Blank, ID 1=Blank Seed, ID 2=Dirt, ID 3=Dirt Seed
+  const sheetUrl = (itemID % 2 !== 0) ? '/SeedSprites.jpg' : '/ItemSprites.jpg';
 
   return (
     <div 
       className={className}
       title={name}
       style={{
-        width: `${SPRITE_SIZE}px`,
-        height: `${SPRITE_SIZE}px`,
+        width: '32px',
+        height: '32px',
         backgroundImage: `url('${sheetUrl}')`,
         backgroundPosition: `-${xOffset}px -${yOffset}px`,
         backgroundRepeat: 'no-repeat',
-        imageRendering: 'pixelated',
-        backgroundSize: `${COLUMNS * SPRITE_SIZE}px auto` 
+        imageRendering: 'pixelated', // Agar tetap tajam
+        backgroundSize: '2112px 4096px' // Wajib didefinisikan agar background tidak terdistorsi
       }}
     />
   );
