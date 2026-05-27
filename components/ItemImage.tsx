@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
+// Cache untuk menghindari hit API berkali-kali untuk item yang sama
 const imageCache = new Map<string, string>();
 
 export default function ItemImage({ name, rarity, className }: { name: string, rarity: number, className?: string }) {
@@ -7,12 +8,16 @@ export default function ItemImage({ name, rarity, className }: { name: string, r
   const [error, setError] = useState<boolean>(false);
 
   const isSeed = name.endsWith(' Seed');
+  // Hapus kata ' Seed' jika ada, agar mencari base block-nya
   const baseName = isSeed ? name.replace(' Seed', '') : name;
 
   useEffect(() => {
     let isMounted = true;
+    
+    // Fandom Wiki mengganti spasi menjadi underscore untuk format file
     const formattedName = baseName.replace(/ /g, '_');
 
+    // Cek cache dulu
     if (imageCache.has(formattedName)) {
       setImgUrl(imageCache.get(formattedName)!);
       return;
@@ -20,36 +25,33 @@ export default function ItemImage({ name, rarity, className }: { name: string, r
 
     const fetchImage = async () => {
       try {
-        // 1. Ambil HTML Halaman via action=parse (Aman dari CORS & Cloudflare)
-        const res = await fetch(`https://growtopia.fandom.com/api.php?action=parse&page=${encodeURIComponent(formattedName)}&prop=text&format=json&origin=*`);
+        // Menggunakan MediaWiki API: prop=imageinfo&iiprop=url
+        // Secara spesifik mencari 'File:Nama_Item.png'
+        const apiUrl = `https://growtopia.fandom.com/api.php?action=query&titles=File:${encodeURIComponent(formattedName)}.png&prop=imageinfo&iiprop=url&format=json&origin=*`;
+        
+        const res = await fetch(apiUrl);
         const data = await res.json();
         
-        if (!data.parse || !data.parse.text) throw new Error("Page not found");
+        const pages = data.query?.pages;
+        if (!pages) throw new Error("No page data");
 
-        const htmlString = data.parse.text['*'];
-
-        // 2. Gunakan DOMParser bawaan browser sebagai pengganti Cheerio (load)
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlString, 'text/html');
-
-        // 3. Targetkan elemen persis seperti script GitHub ($("div.card-header .growsprite > img"))
-        const imgEl = doc.querySelector('.card-header .growsprite img') || doc.querySelector('.growsprite img');
-
-        if (imgEl) {
-          // Ambil atribut src (Kadang img menggunakan data-src untuk lazy loading)
-          let src = imgEl.getAttribute('src') || imgEl.getAttribute('data-src');
-          
-          if (src) {
-            // 4. Replace format seperti script GitHub
-            src = src.replace('webp', 'png');
-            
-            imageCache.set(formattedName, src);
-            if (isMounted) setImgUrl(src);
-            return;
-          }
-        }
+        const pageId = Object.keys(pages)[0];
         
-        if (isMounted) setError(true);
+        // Cek apakah halaman (file gambar) ditemukan
+        if (pageId !== '-1' && pages[pageId].imageinfo && pages[pageId].imageinfo.length > 0) {
+          // url ini adalah direct link ke gambar PNG-nya
+          let url = pages[pageId].imageinfo[0].url;
+          
+          // Opsional: Biasanya wiki memiliki cache "/revision/..." pada URL-nya.
+          // Membuang string setelah /revision/ biasanya mengembalikan gambar resolusi penuh (non-thumbnail).
+          url = url.split('/revision/')[0];
+
+          imageCache.set(formattedName, url);
+          if (isMounted) setImgUrl(url);
+        } else {
+          // Jika file .png tidak ditemukan
+          if (isMounted) setError(true);
+        }
       } catch (err) {
         if (isMounted) setError(true);
       }
