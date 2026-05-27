@@ -14,7 +14,7 @@ export default function ItemImage({ itemID, name, className }: { itemID: number,
 
   // 3. Tentukan file (Ganjil = Seed, Genap = Block)
   // Berdasarkan catatanmu: ID 0=Blank, ID 1=Blank Seed, ID 2=Dirt, ID 3=Dirt Seed
-  const sheetUrl = (itemID % 2 !== 0) ? '/SeedSprites.jpg' : '/ItemSprites.jpg';
+  const sheetUrl = (itemID % 2 !== 0) ? '/SeedSprites.png' : '/ItemSprites.png';
 
   return (
     <div 
