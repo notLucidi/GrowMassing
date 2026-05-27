@@ -28,11 +28,13 @@ function generateTree(
     amountNeeded: number
   ): number {
     
+    // Perbaikan Bug 3 Node: Gunakan resep Block jika Seed tidak ditemukan di splices.txt
     const recipe = recipesData[id] || recipesData[id - 1];
     const isBase = !recipe;
     const isTruncated = recipe && depth >= project.maxDepth;
     const uid = parentUid ? `${parentUid}-${direction}-${id}` : `root-${id}`;
     
+    // Kalkulasi Stock
     const stock = project.currentStock[uid] || 0;
     const actualNeeded = Math.max(0, amountNeeded - stock);
 
@@ -47,6 +49,8 @@ function generateTree(
 
     if (!isBase && !isTruncated) {
       const [i1, i2] = recipe;
+      
+      // Hitung kebutuhan bahan turunan berdasarkan Seed Rate (Farmable/Unfarmable)
       const splicesRequired = Math.ceil(actualNeeded / project.seedReturnRate);
       
       leftW = traverse(i1, depth + 1, x, y + Y_GAP, uid, 'L', splicesRequired);
@@ -67,6 +71,7 @@ function generateTree(
   return { nodes, edges };
 }
 
+// ================= Custom Node =================
 const CustomNode = ({ data }: any) => {
   const { toggleNodeDone, setNodeNote, updateStock, activeProjectId, projects } = useStore();
   const project = projects.find(p => p.id === activeProjectId);
@@ -81,8 +86,13 @@ const CustomNode = ({ data }: any) => {
       <Handle type="target" position={Position.Top} className="w-16 h-2 !bg-slate-600 rounded-full border-none -top-1" />
       
       <div className="flex justify-between items-start mb-3 gap-3">
-        <div className="w-12 h-12 shrink-0 bg-slate-800 rounded-xl border border-slate-700 flex items-center justify-center overflow-hidden shadow-inner">
-          <ItemImage name={data.item.name} className="w-8 h-8 object-contain drop-shadow-md" />
+        {/* Kontainer Gambar Otomatis & Fallback */}
+        <div className="w-12 h-12 shrink-0 bg-slate-800 rounded-xl flex items-center justify-center overflow-hidden shadow-inner">
+          <ItemImage 
+            name={data.item.name} 
+            rarity={data.item.rarity} 
+            className="w-10 h-10 object-contain drop-shadow-md" 
+          />
         </div>
         <div className="flex-1 min-w-0 flex flex-col justify-center">
           <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500 truncate">Rarity <span style={{ color: rarityColor }}>{data.item.rarity}</span></div>
@@ -145,6 +155,7 @@ const CustomNode = ({ data }: any) => {
 
 const nodeTypes = { customItemNode: CustomNode };
 
+// ================= Main Component =================
 export default function MassingTree({ project, itemsData, recipesData }: { project: ProjectState, itemsData: any, recipesData: any }) {
   const { setMaxDepth, setTargetAmount, setSeedReturnRate } = useStore();
 
@@ -155,12 +166,13 @@ export default function MassingTree({ project, itemsData, recipesData }: { proje
     return generateTree(project, recipesData, itemsData);
   }, [project.targetId, project.targetAmount, project.maxDepth, project.currentStock, project.seedReturnRate, recipesData, itemsData]);
 
+  // Sync state lokal React Flow dengan state store
   useEffect(() => {
     setNodes((nds) => {
       if (nds.length === 0 || nds[0]?.id !== calcNodes[0]?.id) return calcNodes;
       return calcNodes.map(newN => {
         const oldN = nds.find(n => n.id === newN.id);
-        return oldN ? { ...newN, position: oldN.position } : newN;
+        return oldN ? { ...newN, position: oldN.position } : newN; // Pertahankan posisi saat digeser manual
       });
     });
     setEdges(calcEdges);
@@ -171,7 +183,6 @@ export default function MassingTree({ project, itemsData, recipesData }: { proje
       {/* Responsive Top Toolbar */}
       <div className="absolute top-16 md:top-6 left-1/2 -translate-x-1/2 z-20 w-[92%] md:w-auto bg-slate-900/90 backdrop-blur-md border border-slate-700 p-4 rounded-2xl shadow-2xl flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
         
-        {/* Nama & Target */}
         <div className="flex-1 w-full md:w-auto border-b border-slate-700 pb-2 md:pb-0 md:border-none">
           <h3 className="text-base md:text-lg font-extrabold text-white truncate max-w-[200px] md:max-w-xs">{project.name}</h3>
           <p className="text-xs text-slate-400 font-medium truncate max-w-[200px] md:max-w-xs">Item: {itemsData[project.targetId]?.name || 'Unknown'}</p>
@@ -179,7 +190,6 @@ export default function MassingTree({ project, itemsData, recipesData }: { proje
         
         <div className="hidden md:block h-10 w-px bg-slate-700"></div>
         
-        {/* Controls Container (Scrollable on very small mobile) */}
         <div className="flex flex-row flex-wrap md:flex-nowrap gap-4 w-full md:w-auto">
           <div className="flex flex-col gap-1.5 flex-1 min-w-[120px]">
             <label className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Target Jml</label>
@@ -192,7 +202,7 @@ export default function MassingTree({ project, itemsData, recipesData }: { proje
           </div>
 
           <div className="flex flex-col gap-1.5 flex-1 min-w-[80px]">
-            <label className="text-[11px] text-slate-400 font-bold uppercase tracking-wider" title="Seed Drop Rate per Tree. Farmable > 1, Unfarmable < 1">Seed Rate</label>
+            <label className="text-[11px] text-slate-400 font-bold uppercase tracking-wider" title="Farmable > 1, Unfarmable < 1">Seed Rate</label>
             <input 
               type="number" step="0.05" min="0.1"
               value={project.seedReturnRate || 1} 
