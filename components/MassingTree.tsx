@@ -14,6 +14,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { useStore, ProjectState } from '../store/useStore';
 import { Check, Edit2, Package } from 'lucide-react';
+import ItemImage from './ItemImage';
 
 const X_GAP = 280;
 const Y_GAP = 220;
@@ -87,14 +88,6 @@ const CustomNode = ({ data }: any) => {
   const stock = project?.currentStock[data.uid] || 0;
   
   const rarityColor = data.item.rarity > 100 ? '#fbbf24' : '#60a5fa';
-  
-  // LOGIKA BARU: Hilangkan kata " Seed" jika ada
-  const searchName = data.item.name.endsWith(' Seed') 
-    ? data.item.name.replace(' Seed', '') 
-    : data.item.name;
-
-  // Kirim nama block murni ke API
-  const imageUrl = `/api/image?name=${encodeURIComponent(searchName)}`;
 
   return (
     <div className={`w-64 bg-slate-800 border-2 rounded-xl p-3 shadow-xl transition-colors ${isDone || data.actualNeeded === 0 ? 'border-teal-500 bg-slate-800/60 opacity-80' : 'border-slate-600'}`}>
@@ -102,13 +95,10 @@ const CustomNode = ({ data }: any) => {
       
       <div className="flex justify-between items-start mb-2 gap-2">
         <div className="w-10 h-10 shrink-0 bg-slate-900 rounded-md border border-slate-700 flex items-center justify-center overflow-hidden">
-          <img 
-            src={imageUrl} 
-            alt={data.item.name} 
-            className="w-8 h-8 object-contain drop-shadow-md"
-            loading="lazy"
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-          />
+          
+          {/* GUNAKAN KOMPONEN BARU DI SINI */}
+          <ItemImage name={data.item.name} className="w-8 h-8 object-contain drop-shadow-md" />
+
         </div>
         <div className="flex-1 min-w-0 pr-1">
           <div className="text-[10px] text-slate-400 truncate">Rarity: <span style={{ color: rarityColor }}>{data.item.rarity}</span></div>
