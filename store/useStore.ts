@@ -6,9 +6,9 @@ export interface ProjectState {
   targetId: number;
   targetAmount: number;
   maxDepth: number;
-  doneNodes: Record<string, boolean>; // uid -> boolean
-  notes: Record<string, string>; // uid -> string
-  startFrom: Record<number, number>; // itemID -> amount
+  doneNodes: Record<string, boolean>;
+  notes: Record<string, string>;
+  currentStock: Record<string, number>; // uid -> amount
 }
 
 interface AppState {
@@ -24,7 +24,7 @@ interface AppState {
   
   toggleNodeDone: (projectId: string, uid: string) => void;
   setNodeNote: (projectId: string, uid: string, note: string) => void;
-  updateStartFrom: (projectId: string, itemId: number, amount: number) => void;
+  updateStock: (projectId: string, uid: string, amount: number) => void;
   setMaxDepth: (projectId: string, depth: number) => void;
   setTargetAmount: (projectId: string, amount: number) => void;
 
@@ -45,11 +45,11 @@ export const useStore = create<AppState>((set, get) => ({
       id: crypto.randomUUID(),
       name,
       targetId,
-      targetAmount: 1,
-      maxDepth: 5,
+      targetAmount: 1, // Default target amount
+      maxDepth: 15,    // Default depth diperbesar
       doneNodes: {},
       notes: {},
-      startFrom: {}
+      currentStock: {}
     };
     return { projects: [...state.projects, newProj], activeProjectId: newProj.id };
   }),
@@ -61,35 +61,21 @@ export const useStore = create<AppState>((set, get) => ({
   })),
 
   toggleNodeDone: (projectId, uid) => set((state) => ({
-    projects: state.projects.map(p => {
-      if (p.id === projectId) {
-        return { ...p, doneNodes: { ...p.doneNodes, [uid]: !p.doneNodes[uid] } };
-      }
-      return p;
-    })
+    projects: state.projects.map(p => p.id === projectId ? { ...p, doneNodes: { ...p.doneNodes, [uid]: !p.doneNodes[uid] } } : p)
   })),
 
   setNodeNote: (projectId, uid, note) => set((state) => ({
-    projects: state.projects.map(p => {
-      if (p.id === projectId) {
-        return { ...p, notes: { ...p.notes, [uid]: note } };
-      }
-      return p;
-    })
+    projects: state.projects.map(p => p.id === projectId ? { ...p, notes: { ...p.notes, [uid]: note } } : p)
   })),
 
-  updateStartFrom: (projectId, itemId, amount) => set((state) => ({
-    projects: state.projects.map(p => {
-      if (p.id === projectId) {
-        return { ...p, startFrom: { ...p.startFrom, [itemId]: amount } };
-      }
-      return p;
-    })
+  updateStock: (projectId, uid, amount) => set((state) => ({
+    projects: state.projects.map(p => p.id === projectId ? { ...p, currentStock: { ...p.currentStock, [uid]: amount } } : p)
   })),
 
   setMaxDepth: (projectId, depth) => set((state) => ({
     projects: state.projects.map(p => p.id === projectId ? { ...p, maxDepth: depth } : p)
   })),
+  
   setTargetAmount: (projectId, amount) => set((state) => ({
     projects: state.projects.map(p => p.id === projectId ? { ...p, targetAmount: amount } : p)
   })),
