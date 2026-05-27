@@ -88,8 +88,13 @@ const CustomNode = ({ data }: any) => {
   
   const rarityColor = data.item.rarity > 100 ? '#fbbf24' : '#60a5fa';
   
-  // Api/image?name
-  const imageUrl = `/api/image?name=${encodeURIComponent(data.item.name)}`;
+  // LOGIKA BARU: Hilangkan kata " Seed" jika ada
+  const searchName = data.item.name.endsWith(' Seed') 
+    ? data.item.name.replace(' Seed', '') 
+    : data.item.name;
+
+  // Kirim nama block murni ke API
+  const imageUrl = `/api/image?name=${encodeURIComponent(searchName)}`;
 
   return (
     <div className={`w-64 bg-slate-800 border-2 rounded-xl p-3 shadow-xl transition-colors ${isDone || data.actualNeeded === 0 ? 'border-teal-500 bg-slate-800/60 opacity-80' : 'border-slate-600'}`}>
