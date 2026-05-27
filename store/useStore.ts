@@ -6,9 +6,10 @@ export interface ProjectState {
   targetId: number;
   targetAmount: number;
   maxDepth: number;
+  seedReturnRate: number; // Menentukan seed loss
   doneNodes: Record<string, boolean>;
   notes: Record<string, string>;
-  currentStock: Record<string, number>; // uid -> amount
+  currentStock: Record<string, number>;
 }
 
 interface AppState {
@@ -27,6 +28,7 @@ interface AppState {
   updateStock: (projectId: string, uid: string, amount: number) => void;
   setMaxDepth: (projectId: string, depth: number) => void;
   setTargetAmount: (projectId: string, amount: number) => void;
+  setSeedReturnRate: (projectId: string, rate: number) => void;
 
   saveData: () => void;
   loadData: (data: any) => void;
@@ -45,8 +47,9 @@ export const useStore = create<AppState>((set, get) => ({
       id: crypto.randomUUID(),
       name,
       targetId,
-      targetAmount: 1, // Default target amount
-      maxDepth: 15,    // Default depth diperbesar
+      targetAmount: 1000,
+      maxDepth: 15,
+      seedReturnRate: 0.8, // Default 0.8 (20% Seed Loss untuk Unfarmable)
       doneNodes: {},
       notes: {},
       currentStock: {}
@@ -78,6 +81,10 @@ export const useStore = create<AppState>((set, get) => ({
   
   setTargetAmount: (projectId, amount) => set((state) => ({
     projects: state.projects.map(p => p.id === projectId ? { ...p, targetAmount: amount } : p)
+  })),
+
+  setSeedReturnRate: (projectId, rate) => set((state) => ({
+    projects: state.projects.map(p => p.id === projectId ? { ...p, seedReturnRate: rate } : p)
   })),
 
   saveData: () => {
