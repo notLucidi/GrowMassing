@@ -1,66 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
-// Cache untuk menghindari hit API berkali-kali untuk item yang sama
-const imageCache = new Map<string, string>();
-
-export default function ItemImage({ name, rarity, className }: { name: string, rarity: number, className?: string }) {
-  const [imgUrl, setImgUrl] = useState<string>('');
+export default function ItemImage({ itemID, name, rarity, className }: { itemID: number, name: string, rarity: number, className?: string }) {
   const [error, setError] = useState<boolean>(false);
 
+  // URL langsung ke CDN menggunakan itemID
+  const imgUrl = `https://cdn.growtopiawiki.com/sprites/${itemID}.png`;
+
   const isSeed = name.endsWith(' Seed');
-  // Hapus kata ' Seed' jika ada, agar mencari base block-nya
   const baseName = isSeed ? name.replace(' Seed', '') : name;
-
-  useEffect(() => {
-    let isMounted = true;
-    
-    // Fandom Wiki mengganti spasi menjadi underscore untuk format file
-    const formattedName = baseName.replace(/ /g, '_');
-
-    // Cek cache dulu
-    if (imageCache.has(formattedName)) {
-      setImgUrl(imageCache.get(formattedName)!);
-      return;
-    }
-
-    const fetchImage = async () => {
-      try {
-        // Menggunakan MediaWiki API: prop=imageinfo&iiprop=url
-        // Secara spesifik mencari 'File:Nama_Item.png'
-        const apiUrl = `https://growtopia.fandom.com/api.php?action=query&titles=File:${encodeURIComponent(formattedName)}.png&prop=imageinfo&iiprop=url&format=json&origin=*`;
-        
-        const res = await fetch(apiUrl);
-        const data = await res.json();
-        
-        const pages = data.query?.pages;
-        if (!pages) throw new Error("No page data");
-
-        const pageId = Object.keys(pages)[0];
-        
-        // Cek apakah halaman (file gambar) ditemukan
-        if (pageId !== '-1' && pages[pageId].imageinfo && pages[pageId].imageinfo.length > 0) {
-          // url ini adalah direct link ke gambar PNG-nya
-          let url = pages[pageId].imageinfo[0].url;
-          
-          // Opsional: Biasanya wiki memiliki cache "/revision/..." pada URL-nya.
-          // Membuang string setelah /revision/ biasanya mengembalikan gambar resolusi penuh (non-thumbnail).
-          url = url.split('/revision/')[0];
-
-          imageCache.set(formattedName, url);
-          if (isMounted) setImgUrl(url);
-        } else {
-          // Jika file .png tidak ditemukan
-          if (isMounted) setError(true);
-        }
-      } catch (err) {
-        if (isMounted) setError(true);
-      }
-    };
-
-    fetchImage();
-
-    return () => { isMounted = false; };
-  }, [baseName]);
 
   const getInitials = (str: string) => {
     const words = str.split(/[\s-]/);
@@ -87,10 +34,6 @@ export default function ItemImage({ name, rarity, className }: { name: string, r
         {isSeed && <span className="text-[8px] leading-none mt-0.5" title="Seed">🌱</span>}
       </div>
     );
-  }
-
-  if (!imgUrl) {
-    return <div className={`animate-pulse bg-slate-800 rounded-lg w-full h-full border border-slate-700 ${className}`}></div>;
   }
 
   return (
