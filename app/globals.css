@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0f172a;
+  --foreground: #f8fafc;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+.tree-node {
+  transition: all 0.2s ease-in-out;
+}
+.tree-node:hover {
+  transform: scale(1.05);
+  z-index: 50;
+}
