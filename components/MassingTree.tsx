@@ -1,14 +1,22 @@
 "use client";
 
-import React, { useMemo } from 'react';
-import ReactFlow, { Background, Controls, Handle, Position, Node, Edge } from 'reactflow';
+import React, { useMemo, useEffect } from 'react';
+import ReactFlow, { 
+  Background, 
+  Controls, 
+  Handle, 
+  Position, 
+  Node, 
+  Edge, 
+  useNodesState, 
+  useEdgesState 
+} from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useStore, ProjectState } from '../store/useStore';
 import { Check, Edit2, Package } from 'lucide-react';
 
-const NODE_WIDTH = 200;
-const X_GAP = 240;
-const Y_GAP = 180;
+const X_GAP = 280;
+const Y_GAP = 220;
 
 function generateTree(
   project: ProjectState, 
@@ -18,7 +26,6 @@ function generateTree(
   const nodes: Node[] = [];
   const edges: Edge[] = [];
   
-  // Algoritma DFS dengan Kalkulasi Target Amount dan Auto-Layout
   function traverse(
     id: number, 
     depth: number, 
@@ -28,8 +35,13 @@ function generateTree(
     direction: 'L' | 'R' | null = null,
     amountNeeded: number
   ): number {
-    const isBase = !recipesData[id];
-    const isTruncated = recipesData[id] && depth >= project.maxDepth;
+    
+    // PERBAIKAN BUG 3 NODE:
+    // Jika ID adalah Seed, cari resep Block-nya (id - 1) di splices.txt
+    const recipe = recipesData[id] || recipesData[id - 1];
+    
+    const isBase = !recipe;
+    const isTruncated = recipe && depth >= project.maxDepth;
     const uid = parentUid ? `${parentUid}-${direction}-${id}` : `root-${id}`;
     
     // Kurangi kebutuhan dengan stock yang di-input manual di node ini
@@ -38,17 +50,16 @@ function generateTree(
 
     const data = {
       id, uid, depth, isBase, isTruncated,
-      amountNeeded, // Total yang di-request parent
-      actualNeeded, // Sisa yang harus di-splice (setelah dikurangi stock)
+      amountNeeded, 
+      actualNeeded, 
       item: itemsData[id] || { name: `Unknown ${id}`, rarity: 0 }
     };
 
     let leftW = 0, rightW = 0;
 
     if (!isBase && !isTruncated) {
-      const [i1, i2] = recipesData[id];
+      const [i1, i2] = recipe; // Menggunakan resep yang berhasil ditemukan
       
-      // Jika actualNeeded 0 (stock sudah cukup), anak-anaknya tidak perlu dibuat lagi (need = 0)
       leftW = traverse(i1, depth + 1, x, y + Y_GAP, uid, 'L', actualNeeded);
       rightW = traverse(i2, depth + 1, x + (leftW * X_GAP), y + Y_GAP, uid, 'R', actualNeeded);
       
@@ -56,7 +67,6 @@ function generateTree(
       edges.push({ id: `e-${uid}-R`, source: uid, target: `${uid}-R-${i2}`, animated: true, style: { stroke: '#94a3b8' } });
     }
 
-    // Hitung posisi parent tepat di tengah anak-anaknya
     const totalW = isBase || isTruncated ? 1 : leftW + rightW;
     const finalX = isBase || isTruncated ? x : x + ((leftW * X_GAP) / 2) - (X_GAP / 4);
 
@@ -77,15 +87,27 @@ const CustomNode = ({ data }: any) => {
   const stock = project?.currentStock[data.uid] || 0;
   
   const rarityColor = data.item.rarity > 100 ? '#fbbf24' : '#60a5fa';
+  
+  // URL API GTID (encodeURIComponent agar spasi menjadi %20 dan api tidak error)
+  const imageUrl = `https://gtid.pro/api/item-image?name=${encodeURIComponent(data.item.name)}`;
 
   return (
-    <div className={`w-52 bg-slate-800 border-2 rounded-xl p-3 shadow-xl transition-colors ${isDone || data.actualNeeded === 0 ? 'border-teal-500 bg-slate-800/60 opacity-80' : 'border-slate-600'}`}>
+    <div className={`w-64 bg-slate-800 border-2 rounded-xl p-3 shadow-xl transition-colors ${isDone || data.actualNeeded === 0 ? 'border-teal-500 bg-slate-800/60 opacity-80' : 'border-slate-600'}`}>
       <Handle type="target" position={Position.Top} className="w-12 !bg-slate-500" />
       
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex-1 pr-2">
-          <div className="text-[10px] text-slate-400">Rarity: <span style={{ color: rarityColor }}>{data.item.rarity}</span></div>
-          <div className={`font-bold text-sm leading-tight ${isDone ? 'text-teal-400 line-through' : 'text-slate-100'}`}>
+      <div className="flex justify-between items-start mb-2 gap-2">
+        <div className="w-10 h-10 shrink-0 bg-slate-900 rounded-md border border-slate-700 flex items-center justify-center overflow-hidden">
+          <img 
+            src={imageUrl} 
+            alt={data.item.name} 
+            className="w-8 h-8 object-contain drop-shadow-md"
+            loading="lazy"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
+        </div>
+        <div className="flex-1 min-w-0 pr-1">
+          <div className="text-[10px] text-slate-400 truncate">Rarity: <span style={{ color: rarityColor }}>{data.item.rarity}</span></div>
+          <div className={`font-bold text-sm leading-tight break-words ${isDone ? 'text-teal-400 line-through' : 'text-slate-100'}`}>
             {data.item.name}
           </div>
         </div>
@@ -121,7 +143,7 @@ const CustomNode = ({ data }: any) => {
         </div>
 
         <div className="flex items-center gap-1 text-[11px] text-slate-400">
-          <Edit2 className="w-3 h-3" />
+          <Edit2 className="w-3 h-3 shrink-0" />
           <input 
             type="text" 
             placeholder="Tambahkan Note..." 
@@ -149,9 +171,27 @@ const nodeTypes = { customItemNode: CustomNode };
 export default function MassingTree({ project, itemsData, recipesData }: { project: ProjectState, itemsData: any, recipesData: any }) {
   const { setMaxDepth, setTargetAmount } = useStore();
 
-  const { nodes, edges } = useMemo(() => {
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  const { nodes: calcNodes, edges: calcEdges } = useMemo(() => {
     return generateTree(project, recipesData, itemsData);
-  }, [project, recipesData, itemsData]);
+  }, [project.targetId, project.targetAmount, project.maxDepth, project.currentStock, recipesData, itemsData]);
+
+  // Sync dengan State Nodes (Agar bisa di geser/drag)
+  useEffect(() => {
+    setNodes((nds) => {
+      // Jika Node kosong atau project diganti, render ulang total posisinya.
+      if (nds.length === 0 || nds[0]?.id !== calcNodes[0]?.id) return calcNodes;
+      
+      // Jika update berasal dari Note/Stock, Timpa datanya tapi PERTAHANKAN posisinya (drag tetap di tempat)
+      return calcNodes.map(newN => {
+        const oldN = nds.find(n => n.id === newN.id);
+        return oldN ? { ...newN, position: oldN.position } : newN;
+      });
+    });
+    setEdges(calcEdges);
+  }, [calcNodes, calcEdges, setNodes, setEdges]);
 
   return (
     <div className="relative w-full h-full flex flex-col">
@@ -196,6 +236,8 @@ export default function MassingTree({ project, itemsData, recipesData }: { proje
       <ReactFlow 
         nodes={nodes} 
         edges={edges} 
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         fitView
         className="bg-slate-950"
