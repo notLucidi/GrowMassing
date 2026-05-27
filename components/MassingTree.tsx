@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo } from 'react';
 import ReactFlow, { Background, Controls, Handle, Position, Node, Edge } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useStore, ProjectState } from '../store/useStore';
@@ -28,8 +28,6 @@ function generateTree(
     // Unique ID for UI because one item can appear multiple times
     const uid = parentUid ? `${parentUid}-${direction}-${id}` : `root-${id}`;
     
-    const nodeWidthCalc = (isBase || isTruncated) ? 1 : 2;
-
     const data = {
       id,
       uid,
@@ -40,7 +38,7 @@ function generateTree(
     };
 
     let shift = 0;
-    let leftW = 0; // Deklarasikan di luar blok if agar terbaca di return
+    let leftW = 0; // Fix scope variable
 
     if (!isBase && !isTruncated) {
       const [i1, i2] = recipesData[id];
@@ -68,6 +66,11 @@ function generateTree(
     return isBase || isTruncated ? 1 : leftW * 2;
   }
 
+  traverse(targetId, 0, 0, 0);
+  
+  return { nodes, edges };
+}
+
 // ================= Custom Node =================
 const CustomNode = ({ data }: any) => {
   const { toggleNodeDone, setNodeNote, activeProjectId, projects, updateStartFrom } = useStore();
@@ -76,7 +79,7 @@ const CustomNode = ({ data }: any) => {
   const note = project?.notes[data.uid] || '';
   const startAmount = project?.startFrom[data.id] || 0;
   
-  const rarityColor = data.item.rarity > 100 ? '#fbbf24' : '#60a5fa'; // Example rarity color
+  const rarityColor = data.item.rarity > 100 ? '#fbbf24' : '#60a5fa';
 
   return (
     <div className={`w-44 bg-slate-800 border-2 rounded-xl p-3 shadow-lg transition-colors ${isDone ? 'border-teal-500 bg-slate-800/80' : 'border-slate-600'}`}>
