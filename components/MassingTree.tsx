@@ -7,8 +7,8 @@ import { useStore, ProjectState } from '../store/useStore';
 import { Check, Edit2, Package } from 'lucide-react';
 import ItemImage from './ItemImage';
 
-const X_GAP = 280;
-const Y_GAP = 220;
+const X_GAP = 300;
+const Y_GAP = 240;
 
 function generateTree(
   project: ProjectState, 
@@ -47,16 +47,13 @@ function generateTree(
 
     if (!isBase && !isTruncated) {
       const [i1, i2] = recipe;
-      
-      // Kalkulasi Seed Loss (Hanya berlaku untuk bahan yang akan di-splice)
-      // Jika butuh 1000 dan rate 0.8, maka bahan turunannya butuh 1000 / 0.8 = 1250
       const splicesRequired = Math.ceil(actualNeeded / project.seedReturnRate);
       
       leftW = traverse(i1, depth + 1, x, y + Y_GAP, uid, 'L', splicesRequired);
       rightW = traverse(i2, depth + 1, x + (leftW * X_GAP), y + Y_GAP, uid, 'R', splicesRequired);
       
-      edges.push({ id: `e-${uid}-L`, source: uid, target: `${uid}-L-${i1}`, animated: true, style: { stroke: '#94a3b8' } });
-      edges.push({ id: `e-${uid}-R`, source: uid, target: `${uid}-R-${i2}`, animated: true, style: { stroke: '#94a3b8' } });
+      edges.push({ id: `e-${uid}-L`, source: uid, target: `${uid}-L-${i1}`, animated: true, style: { stroke: '#475569', strokeWidth: 2 } });
+      edges.push({ id: `e-${uid}-R`, source: uid, target: `${uid}-R-${i2}`, animated: true, style: { stroke: '#475569', strokeWidth: 2 } });
     }
 
     const totalW = isBase || isTruncated ? 1 : leftW + rightW;
@@ -70,7 +67,6 @@ function generateTree(
   return { nodes, edges };
 }
 
-// ================= Custom Node =================
 const CustomNode = ({ data }: any) => {
   const { toggleNodeDone, setNodeNote, updateStock, activeProjectId, projects } = useStore();
   const project = projects.find(p => p.id === activeProjectId);
@@ -81,75 +77,74 @@ const CustomNode = ({ data }: any) => {
   const rarityColor = data.item.rarity > 100 ? '#fbbf24' : '#60a5fa';
 
   return (
-    <div className={`w-64 bg-slate-800 border-2 rounded-xl p-3 shadow-xl transition-colors ${isDone || data.actualNeeded === 0 ? 'border-teal-500 bg-slate-800/60 opacity-80' : 'border-slate-600'}`}>
-      <Handle type="target" position={Position.Top} className="w-12 !bg-slate-500" />
+    <div className={`w-[260px] bg-slate-900 border-2 rounded-2xl p-4 shadow-2xl transition-all duration-300 ${isDone || data.actualNeeded === 0 ? 'border-teal-500 bg-slate-900/80 opacity-70 scale-95' : 'border-slate-700 hover:border-slate-500 hover:shadow-slate-800/50'}`}>
+      <Handle type="target" position={Position.Top} className="w-16 h-2 !bg-slate-600 rounded-full border-none -top-1" />
       
-      <div className="flex justify-between items-start mb-2 gap-2">
-        <div className="w-10 h-10 shrink-0 bg-slate-900 rounded-md border border-slate-700 flex items-center justify-center overflow-hidden">
+      <div className="flex justify-between items-start mb-3 gap-3">
+        <div className="w-12 h-12 shrink-0 bg-slate-800 rounded-xl border border-slate-700 flex items-center justify-center overflow-hidden shadow-inner">
           <ItemImage name={data.item.name} className="w-8 h-8 object-contain drop-shadow-md" />
         </div>
-        <div className="flex-1 min-w-0 pr-1">
-          <div className="text-[10px] text-slate-400 truncate">Rarity: <span style={{ color: rarityColor }}>{data.item.rarity}</span></div>
-          <div className={`font-bold text-sm leading-tight break-words ${isDone ? 'text-teal-400 line-through' : 'text-slate-100'}`}>
+        <div className="flex-1 min-w-0 flex flex-col justify-center">
+          <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500 truncate">Rarity <span style={{ color: rarityColor }}>{data.item.rarity}</span></div>
+          <div className={`font-bold text-sm leading-tight break-words mt-0.5 ${isDone ? 'text-teal-500 line-through' : 'text-slate-100'}`}>
             {data.item.name}
           </div>
         </div>
         <button 
           onClick={() => activeProjectId && toggleNodeDone(activeProjectId, data.uid)}
-          className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center border transition ${isDone ? 'bg-teal-500 border-teal-500 text-white' : 'border-slate-500 text-transparent hover:border-teal-500'}`}
+          className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${isDone ? 'bg-teal-500 border-teal-500 text-white shadow-[0_0_10px_rgba(20,184,166,0.5)]' : 'border-slate-600 text-transparent hover:border-teal-500 hover:text-teal-500'}`}
         >
-          <Check className="w-3 h-3" />
+          <Check className="w-4 h-4" />
         </button>
       </div>
 
-      <div className="space-y-2 mt-2 pt-2 border-t border-slate-700">
-        <div className="flex justify-between text-xs">
+      <div className="space-y-2.5 pt-3 border-t border-slate-800">
+        <div className="flex justify-between text-xs font-medium">
           <span className="text-slate-400">Target Demand:</span>
-          <span className="text-teal-400 font-bold">{data.amountNeeded.toLocaleString()}</span>
+          <span className="text-teal-400">{data.amountNeeded.toLocaleString()}</span>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-900 rounded p-1 border border-slate-700 focus-within:border-teal-500">
-           <Package className="w-3 h-3 text-orange-400 shrink-0" />
+        <div className="flex items-center gap-2 text-sm text-slate-300 bg-slate-950 rounded-lg p-2 border border-slate-800 focus-within:border-teal-600 focus-within:ring-1 focus-within:ring-teal-600/50 transition-all">
+           <Package className="w-4 h-4 text-orange-500 shrink-0" />
            <input 
              type="number" 
              placeholder="Stock Dimiliki" 
              value={stock || ''}
              onChange={(e) => activeProjectId && updateStock(activeProjectId, data.uid, Number(e.target.value))}
-             className="bg-transparent outline-none w-full text-orange-300 placeholder:text-slate-600"
+             className="bg-transparent outline-none w-full text-orange-400 font-semibold placeholder:text-slate-700 placeholder:font-normal"
            />
         </div>
 
-        <div className="flex justify-between text-xs bg-red-950/30 p-1 rounded border border-red-900/50">
+        <div className="flex justify-between text-xs font-semibold bg-red-950/40 p-2 rounded-lg border border-red-900/40">
           <span className="text-slate-400">Net Splice Needed:</span>
-          <span className="text-red-400 font-bold">{data.actualNeeded.toLocaleString()}</span>
+          <span className="text-red-400">{data.actualNeeded.toLocaleString()}</span>
         </div>
 
-        <div className="flex items-center gap-1 text-[11px] text-slate-400">
-          <Edit2 className="w-3 h-3 shrink-0" />
+        <div className="flex items-center gap-2 text-xs text-slate-400 pt-1">
+          <Edit2 className="w-3.5 h-3.5 shrink-0 text-slate-500" />
           <input 
             type="text" 
-            placeholder="Tambahkan Note..." 
+            placeholder="Tambahkan Catatan..." 
             value={note}
             onChange={(e) => activeProjectId && setNodeNote(activeProjectId, data.uid, e.target.value)}
-            className="bg-transparent border-none outline-none w-full text-slate-300 placeholder:text-slate-600"
+            className="bg-transparent border-none outline-none w-full text-slate-300 placeholder:text-slate-600 font-medium"
           />
         </div>
       </div>
 
       {data.isTruncated && (
-        <div className="text-[10px] text-red-400 mt-2 text-center bg-red-950/30 py-1 rounded">
-          Max Depth Reached
+        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[10px] font-bold text-red-300 bg-red-900 px-3 py-1 rounded-full shadow-lg border border-red-700 whitespace-nowrap">
+          MAX DEPTH REACHED
         </div>
       )}
       
-      <Handle type="source" position={Position.Bottom} className="w-12 !bg-slate-500" />
+      <Handle type="source" position={Position.Bottom} className="w-16 h-2 !bg-slate-600 rounded-full border-none -bottom-1" />
     </div>
   );
 };
 
 const nodeTypes = { customItemNode: CustomNode };
 
-// ================= Main Component =================
 export default function MassingTree({ project, itemsData, recipesData }: { project: ProjectState, itemsData: any, recipesData: any }) {
   const { setMaxDepth, setTargetAmount, setSeedReturnRate } = useStore();
 
@@ -173,53 +168,51 @@ export default function MassingTree({ project, itemsData, recipesData }: { proje
 
   return (
     <div className="relative w-full h-full flex flex-col">
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-slate-900 border border-slate-700 p-4 rounded-2xl shadow-xl flex items-center gap-6">
-        <div>
-          <h3 className="text-lg font-bold text-white">{project.name}</h3>
-          <p className="text-xs text-slate-400">Item: {itemsData[project.targetId]?.name || 'Unknown'}</p>
+      {/* Responsive Top Toolbar */}
+      <div className="absolute top-16 md:top-6 left-1/2 -translate-x-1/2 z-20 w-[92%] md:w-auto bg-slate-900/90 backdrop-blur-md border border-slate-700 p-4 rounded-2xl shadow-2xl flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
+        
+        {/* Nama & Target */}
+        <div className="flex-1 w-full md:w-auto border-b border-slate-700 pb-2 md:pb-0 md:border-none">
+          <h3 className="text-base md:text-lg font-extrabold text-white truncate max-w-[200px] md:max-w-xs">{project.name}</h3>
+          <p className="text-xs text-slate-400 font-medium truncate max-w-[200px] md:max-w-xs">Item: {itemsData[project.targetId]?.name || 'Unknown'}</p>
         </div>
         
-        <div className="h-8 w-px bg-slate-700"></div>
+        <div className="hidden md:block h-10 w-px bg-slate-700"></div>
         
-        <div className="flex flex-col gap-1 w-32">
-          <label className="text-xs text-slate-400 font-bold">Target Jumlah</label>
-          <input 
-            type="number" 
-            min="1"
-            value={project.targetAmount || ''} 
-            onChange={(e) => setTargetAmount(project.id, Number(e.target.value))}
-            className="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-teal-400 outline-none text-sm focus:border-teal-500 font-bold"
-          />
-        </div>
+        {/* Controls Container (Scrollable on very small mobile) */}
+        <div className="flex flex-row flex-wrap md:flex-nowrap gap-4 w-full md:w-auto">
+          <div className="flex flex-col gap-1.5 flex-1 min-w-[120px]">
+            <label className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Target Jml</label>
+            <input 
+              type="number" min="1"
+              value={project.targetAmount || ''} 
+              onChange={(e) => setTargetAmount(project.id, Number(e.target.value))}
+              className="w-full bg-slate-950 border border-slate-600 rounded-lg px-3 py-1.5 text-teal-400 outline-none text-sm focus:border-teal-500 font-bold shadow-inner"
+            />
+          </div>
 
-        <div className="h-8 w-px bg-slate-700"></div>
+          <div className="flex flex-col gap-1.5 flex-1 min-w-[80px]">
+            <label className="text-[11px] text-slate-400 font-bold uppercase tracking-wider" title="Seed Drop Rate per Tree. Farmable > 1, Unfarmable < 1">Seed Rate</label>
+            <input 
+              type="number" step="0.05" min="0.1"
+              value={project.seedReturnRate || 1} 
+              onChange={(e) => setSeedReturnRate(project.id, Number(e.target.value))}
+              className="w-full bg-slate-950 border border-slate-600 rounded-lg px-3 py-1.5 text-orange-400 outline-none text-sm focus:border-orange-500 font-bold shadow-inner"
+            />
+          </div>
 
-        <div className="flex flex-col gap-1 w-24">
-          <label className="text-xs text-slate-400 font-bold" title="Seed Drop Rate per Tree. Farmable > 1, Unfarmable < 1">Seed Rate</label>
-          <input 
-            type="number" 
-            step="0.05"
-            min="0.1"
-            value={project.seedReturnRate || 1} 
-            onChange={(e) => setSeedReturnRate(project.id, Number(e.target.value))}
-            className="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-orange-400 outline-none text-sm focus:border-orange-500 font-bold"
-          />
-        </div>
-
-        <div className="h-8 w-px bg-slate-700"></div>
-
-        <div className="flex flex-col gap-1 w-32">
-          <label className="text-xs text-slate-400 flex justify-between">
-            <span>Depth Limit</span>
-            <span className="font-bold text-teal-400">{project.maxDepth}</span>
-          </label>
-          <input 
-            type="range" 
-            min="1" max="30" 
-            value={project.maxDepth} 
-            onChange={(e) => setMaxDepth(project.id, Number(e.target.value))}
-            className="accent-teal-500 cursor-pointer"
-          />
+          <div className="flex flex-col gap-1.5 flex-1 min-w-[120px]">
+            <label className="text-[11px] text-slate-400 flex justify-between font-bold uppercase tracking-wider">
+              <span>Depth</span>
+              <span className="text-teal-400">{project.maxDepth}</span>
+            </label>
+            <input 
+              type="range" min="1" max="30" 
+              value={project.maxDepth} 
+              onChange={(e) => setMaxDepth(project.id, Number(e.target.value))}
+              className="w-full mt-1 accent-teal-500 cursor-pointer"
+            />
+          </div>
         </div>
       </div>
 
@@ -230,11 +223,11 @@ export default function MassingTree({ project, itemsData, recipesData }: { proje
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         fitView
-        className="bg-slate-950"
+        className="bg-[#0b1120]"
         minZoom={0.05}
       >
-        <Background color="#1e293b" gap={16} size={1} />
-        <Controls className="bg-slate-800 border-slate-700 fill-teal-500" />
+        <Background color="#1e293b" gap={24} size={2} />
+        <Controls className="bg-slate-800 border-slate-700 fill-teal-500 mb-4 mr-4 shadow-xl" />
       </ReactFlow>
     </div>
   );
