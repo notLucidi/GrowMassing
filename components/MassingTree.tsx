@@ -83,10 +83,12 @@ const CustomNode = ({ data }: any) => {
       <div className="flex justify-between items-start mb-3 gap-3">
         <div className="w-12 h-12 shrink-0 bg-slate-800 rounded-xl border border-slate-700 flex items-center justify-center overflow-hidden shadow-inner">
           <ItemImage 
-            name={data.item.name} 
-            rarity={data.item.rarity} 
-            className="w-10 h-10 object-contain drop-shadow-md" 
-          />
+  itemID={data.item.itemID || data.id}
+  name={data.item.name} 
+  rarity={data.item.rarity} 
+  className="w-10 h-10 object-contain drop-shadow-md" 
+/>
+
         </div>
         <div className="flex-1 min-w-0 flex flex-col justify-center">
           <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500 truncate">Rarity <span style={{ color: rarityColor }}>{data.item.rarity}</span></div>
