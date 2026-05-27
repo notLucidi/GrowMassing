@@ -1,18 +1,26 @@
 import React from 'react';
 
-export default function ItemImage({ itemID, name, className }: { itemID: number, name: string, className?: string }) {
-  // ID ganjil = Seed, ID genap = Item
+export default function ItemImage({ 
+  itemID, 
+  name, 
+  className, 
+  customOffset 
+}: { 
+  itemID: number, 
+  name: string, 
+  className?: string,
+  // Tambahkan opsional customOffset untuk override jika ID tidak sinkron dengan grid
+  customOffset?: { x: number, y: number } 
+}) {
   const isSeed = itemID % 2 !== 0;
-  
-  // Index sprite berdasarkan ID
   const sheetIndex = Math.floor(itemID / 2);
   
-  // Konfigurasi berdasarkan spesifikasi file (2112px / 32px = 66 kolom)
   const COLUMNS = 66; 
   const SPRITE_SIZE = 32;
 
-  const col = sheetIndex % COLUMNS;
-  const row = Math.floor(sheetIndex / COLUMNS);
+  // Jika customOffset diberikan, gunakan itu. Jika tidak, pakai kalkulasi grid.
+  const col = customOffset ? customOffset.x / SPRITE_SIZE : sheetIndex % COLUMNS;
+  const row = customOffset ? customOffset.y / SPRITE_SIZE : Math.floor(sheetIndex / COLUMNS);
 
   const xOffset = col * SPRITE_SIZE;
   const yOffset = row * SPRITE_SIZE;
@@ -30,7 +38,6 @@ export default function ItemImage({ itemID, name, className }: { itemID: number,
         backgroundPosition: `-${xOffset}px -${yOffset}px`,
         backgroundRepeat: 'no-repeat',
         imageRendering: 'pixelated',
-        // Menggunakan lebar total spritesheet agar backgroundSize akurat
         backgroundSize: `${COLUMNS * SPRITE_SIZE}px auto` 
       }}
     />
