@@ -19,7 +19,7 @@ export default function ItemImage({ itemID, name, className }: { itemID: number,
   const yOffset = row * SPRITE_SIZE;
 
   // Pilih file sumber
-  const sheetUrl = isSeed ? '/SeedSprites.png' : '/ItemSprites.png';
+  const sheetUrl = isSeed ? '/SeedSprites.webp' : '/ItemSprites.webp';
 
   return (
     <div 
