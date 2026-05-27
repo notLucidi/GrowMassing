@@ -40,11 +40,12 @@ function generateTree(
     };
 
     let shift = 0;
-    
+    let leftW = 0; // Deklarasikan di luar blok if agar terbaca di return
+
     if (!isBase && !isTruncated) {
       const [i1, i2] = recipesData[id];
       
-      const leftW = traverse(i1, depth + 1, x, y + Y_GAP, uid, 'L');
+      leftW = traverse(i1, depth + 1, x, y + Y_GAP, uid, 'L');
       shift = leftW * X_GAP;
       
       traverse(i2, depth + 1, x + shift, y + Y_GAP, uid, 'R');
@@ -64,13 +65,8 @@ function generateTree(
       type: 'customItemNode',
     });
 
-    return isBase || isTruncated ? 1 : leftW * 2; // Rough width estimation for parent centering
+    return isBase || isTruncated ? 1 : leftW * 2;
   }
-
-  traverse(targetId, 0, 0, 0);
-  
-  return { nodes, edges };
-}
 
 // ================= Custom Node =================
 const CustomNode = ({ data }: any) => {
