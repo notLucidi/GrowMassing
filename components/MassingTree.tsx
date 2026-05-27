@@ -1,16 +1,7 @@
 "use client";
 
 import React, { useMemo, useEffect } from 'react';
-import ReactFlow, { 
-  Background, 
-  Controls, 
-  Handle, 
-  Position, 
-  Node, 
-  Edge, 
-  useNodesState, 
-  useEdgesState 
-} from 'reactflow';
+import ReactFlow, { Background, Controls, Handle, Position, Node, Edge, useNodesState, useEdgesState } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useStore, ProjectState } from '../store/useStore';
 import { Check, Edit2, Package } from 'lucide-react';
@@ -37,15 +28,11 @@ function generateTree(
     amountNeeded: number
   ): number {
     
-    // PERBAIKAN BUG 3 NODE:
-    // Jika ID adalah Seed, cari resep Block-nya (id - 1) di splices.txt
     const recipe = recipesData[id] || recipesData[id - 1];
-    
     const isBase = !recipe;
     const isTruncated = recipe && depth >= project.maxDepth;
     const uid = parentUid ? `${parentUid}-${direction}-${id}` : `root-${id}`;
     
-    // Kurangi kebutuhan dengan stock yang di-input manual di node ini
     const stock = project.currentStock[uid] || 0;
     const actualNeeded = Math.max(0, amountNeeded - stock);
 
@@ -59,10 +46,14 @@ function generateTree(
     let leftW = 0, rightW = 0;
 
     if (!isBase && !isTruncated) {
-      const [i1, i2] = recipe; // Menggunakan resep yang berhasil ditemukan
+      const [i1, i2] = recipe;
       
-      leftW = traverse(i1, depth + 1, x, y + Y_GAP, uid, 'L', actualNeeded);
-      rightW = traverse(i2, depth + 1, x + (leftW * X_GAP), y + Y_GAP, uid, 'R', actualNeeded);
+      // Kalkulasi Seed Loss (Hanya berlaku untuk bahan yang akan di-splice)
+      // Jika butuh 1000 dan rate 0.8, maka bahan turunannya butuh 1000 / 0.8 = 1250
+      const splicesRequired = Math.ceil(actualNeeded / project.seedReturnRate);
+      
+      leftW = traverse(i1, depth + 1, x, y + Y_GAP, uid, 'L', splicesRequired);
+      rightW = traverse(i2, depth + 1, x + (leftW * X_GAP), y + Y_GAP, uid, 'R', splicesRequired);
       
       edges.push({ id: `e-${uid}-L`, source: uid, target: `${uid}-L-${i1}`, animated: true, style: { stroke: '#94a3b8' } });
       edges.push({ id: `e-${uid}-R`, source: uid, target: `${uid}-R-${i2}`, animated: true, style: { stroke: '#94a3b8' } });
@@ -95,10 +86,7 @@ const CustomNode = ({ data }: any) => {
       
       <div className="flex justify-between items-start mb-2 gap-2">
         <div className="w-10 h-10 shrink-0 bg-slate-900 rounded-md border border-slate-700 flex items-center justify-center overflow-hidden">
-          
-          {/* GUNAKAN KOMPONEN BARU DI SINI */}
           <ItemImage name={data.item.name} className="w-8 h-8 object-contain drop-shadow-md" />
-
         </div>
         <div className="flex-1 min-w-0 pr-1">
           <div className="text-[10px] text-slate-400 truncate">Rarity: <span style={{ color: rarityColor }}>{data.item.rarity}</span></div>
@@ -116,7 +104,7 @@ const CustomNode = ({ data }: any) => {
 
       <div className="space-y-2 mt-2 pt-2 border-t border-slate-700">
         <div className="flex justify-between text-xs">
-          <span className="text-slate-400">Target Parent:</span>
+          <span className="text-slate-400">Target Demand:</span>
           <span className="text-teal-400 font-bold">{data.amountNeeded.toLocaleString()}</span>
         </div>
 
@@ -128,12 +116,11 @@ const CustomNode = ({ data }: any) => {
              value={stock || ''}
              onChange={(e) => activeProjectId && updateStock(activeProjectId, data.uid, Number(e.target.value))}
              className="bg-transparent outline-none w-full text-orange-300 placeholder:text-slate-600"
-             title="Stock yang sudah ada"
            />
         </div>
 
         <div className="flex justify-between text-xs bg-red-950/30 p-1 rounded border border-red-900/50">
-          <span className="text-slate-400">Need to Splice:</span>
+          <span className="text-slate-400">Net Splice Needed:</span>
           <span className="text-red-400 font-bold">{data.actualNeeded.toLocaleString()}</span>
         </div>
 
@@ -164,22 +151,18 @@ const nodeTypes = { customItemNode: CustomNode };
 
 // ================= Main Component =================
 export default function MassingTree({ project, itemsData, recipesData }: { project: ProjectState, itemsData: any, recipesData: any }) {
-  const { setMaxDepth, setTargetAmount } = useStore();
+  const { setMaxDepth, setTargetAmount, setSeedReturnRate } = useStore();
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   const { nodes: calcNodes, edges: calcEdges } = useMemo(() => {
     return generateTree(project, recipesData, itemsData);
-  }, [project.targetId, project.targetAmount, project.maxDepth, project.currentStock, recipesData, itemsData]);
+  }, [project.targetId, project.targetAmount, project.maxDepth, project.currentStock, project.seedReturnRate, recipesData, itemsData]);
 
-  // Sync dengan State Nodes (Agar bisa di geser/drag)
   useEffect(() => {
     setNodes((nds) => {
-      // Jika Node kosong atau project diganti, render ulang total posisinya.
       if (nds.length === 0 || nds[0]?.id !== calcNodes[0]?.id) return calcNodes;
-      
-      // Jika update berasal dari Note/Stock, Timpa datanya tapi PERTAHANKAN posisinya (drag tetap di tempat)
       return calcNodes.map(newN => {
         const oldN = nds.find(n => n.id === newN.id);
         return oldN ? { ...newN, position: oldN.position } : newN;
@@ -190,7 +173,6 @@ export default function MassingTree({ project, itemsData, recipesData }: { proje
 
   return (
     <div className="relative w-full h-full flex flex-col">
-      {/* Top Toolbar */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-slate-900 border border-slate-700 p-4 rounded-2xl shadow-xl flex items-center gap-6">
         <div>
           <h3 className="text-lg font-bold text-white">{project.name}</h3>
@@ -212,6 +194,20 @@ export default function MassingTree({ project, itemsData, recipesData }: { proje
 
         <div className="h-8 w-px bg-slate-700"></div>
 
+        <div className="flex flex-col gap-1 w-24">
+          <label className="text-xs text-slate-400 font-bold" title="Seed Drop Rate per Tree. Farmable > 1, Unfarmable < 1">Seed Rate</label>
+          <input 
+            type="number" 
+            step="0.05"
+            min="0.1"
+            value={project.seedReturnRate || 1} 
+            onChange={(e) => setSeedReturnRate(project.id, Number(e.target.value))}
+            className="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-orange-400 outline-none text-sm focus:border-orange-500 font-bold"
+          />
+        </div>
+
+        <div className="h-8 w-px bg-slate-700"></div>
+
         <div className="flex flex-col gap-1 w-32">
           <label className="text-xs text-slate-400 flex justify-between">
             <span>Depth Limit</span>
@@ -227,7 +223,6 @@ export default function MassingTree({ project, itemsData, recipesData }: { proje
         </div>
       </div>
 
-      {/* ReactFlow Canvas */}
       <ReactFlow 
         nodes={nodes} 
         edges={edges} 
