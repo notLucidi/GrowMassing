@@ -1,56 +1,41 @@
-import React, { useState } from 'react';
+import React from 'react';
 
-export default function ItemImage({ name, rarity, className }: { name: string, rarity: number, className?: string }) {
-  const [error, setError] = useState<boolean>(false);
+export default function ItemImage({ itemID, name, className }: { itemID: number, name: string, className?: string }) {
+  // 1. Tentukan apakah item adalah seed (ID Ganjil)
+  const isSeed = itemID % 2 !== 0;
+  
+  // 2. Hitung index posisi pada grid (ID 0 & 1 = index 0, ID 2 & 3 = index 1, dst)
+  const sheetIndex = Math.floor(itemID / 2);
+  
+  // 3. Asumsi jumlah kolom spritesheet Fandom adalah 32 (Lebar 1024px / 32px)
+  // Jika gambar bergeser, ubah angka 32 ini sesuai jumlah item per baris pada gambarmu.
+  const COLUMNS = 32; 
+  const SPRITE_SIZE = 32;
 
-  // Deteksi Seed
-  const isSeed = name.endsWith(' Seed');
-  const baseName = isSeed ? name.replace(' Seed', '') : name;
-  const formattedName = baseName.replace(/ /g, '_');
+  const col = sheetIndex % COLUMNS;
+  const row = Math.floor(sheetIndex / COLUMNS);
 
-  // URL Fandom (Tetap dicoba sebagai prioritas pertama)
-  const imgUrl = `https://growtopia.fandom.com/wiki/Special:FilePath/${encodeURIComponent(formattedName)}.png`;
+  const xOffset = col * SPRITE_SIZE;
+  const yOffset = row * SPRITE_SIZE;
 
-  // Fungsi untuk mendapatkan Inisial Nama (Contoh: "Hospital Bed" -> "HB", "Surg-E" -> "SU")
-  const getInitials = (str: string) => {
-    const words = str.split(/[\s-]/);
-    if (words.length >= 2) {
-      return (words[0][0] + words[1][0]).toUpperCase();
-    }
-    return str.substring(0, 2).toUpperCase();
-  };
+  // Pilih file sumber
+  const sheetUrl = isSeed ? '/SeedSprites.jpg' : '/ItemSprites.jpg';
 
-  // Fungsi Warna berdasarkan Rarity Growtopia
-  const getFallbackStyle = (r: number) => {
-    if (r >= 100) return 'bg-yellow-900/40 text-yellow-400 border-yellow-600/50'; // Rarity tinggi (Kuning)
-    if (r >= 60) return 'bg-purple-900/40 text-purple-400 border-purple-600/50';  // Rarity menengah atas (Ungu)
-    if (r >= 20) return 'bg-blue-900/40 text-blue-400 border-blue-600/50';        // Rarity menengah (Biru)
-    return 'bg-slate-800 text-slate-300 border-slate-600';                        // Rarity rendah (Abu-abu)
-  };
-
-  // Jika error/gambar tidak ada, tampilkan Fallback UI
-  if (error) {
-    return (
-      <div 
-        className={`flex flex-col items-center justify-center rounded-lg border shadow-inner ${getFallbackStyle(rarity)} ${className}`}
-        title={name}
-      >
-        <span className="font-extrabold text-[12px] tracking-tighter leading-none mt-0.5">
-          {getInitials(baseName)}
-        </span>
-        {isSeed && <span className="text-[8px] leading-none mt-0.5" title="Seed">🌱</span>}
-      </div>
-    );
-  }
-
-  // Coba muat gambar asli
   return (
-    <img 
-      src={imgUrl} 
-      alt={name} 
-      className={className} 
-      loading="lazy" 
-      onError={() => setError(true)} // Jika link return HTML Error/404, langsung picu fallback
+    <div 
+      className={className}
+      title={name}
+      style={{
+        width: `${SPRITE_SIZE}px`,
+        height: `${SPRITE_SIZE}px`,
+        backgroundImage: `url('${sheetUrl}')`,
+        backgroundPosition: `-${xOffset}px -${yOffset}px`,
+        backgroundRepeat: 'no-repeat',
+        // imageRendering pixelated untuk memastikan sprite GT tetap tajam saat di-zoom
+        imageRendering: 'pixelated', 
+        // Skala menyesuaikan ukuran container (misal container w-10 h-10)
+        backgroundSize: `${COLUMNS * SPRITE_SIZE}px auto` 
+      }}
     />
   );
 }
