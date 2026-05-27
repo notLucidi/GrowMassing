@@ -88,8 +88,8 @@ const CustomNode = ({ data }: any) => {
   
   const rarityColor = data.item.rarity > 100 ? '#fbbf24' : '#60a5fa';
   
-  // URL API GTID (encodeURIComponent agar spasi menjadi %20 dan api tidak error)
-  const imageUrl = `https://gtid.pro/api/item-image?name=${encodeURIComponent(data.item.name)}`;
+  // Api/image?name
+  const imageUrl = `/api/image?name=${encodeURIComponent(data.item.name)}`;
 
   return (
     <div className={`w-64 bg-slate-800 border-2 rounded-xl p-3 shadow-xl transition-colors ${isDone || data.actualNeeded === 0 ? 'border-teal-500 bg-slate-800/60 opacity-80' : 'border-slate-600'}`}>
