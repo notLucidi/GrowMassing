@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import MassingTree from '../components/MassingTree';
-import { Save, Upload, Plus, Trash, Folder, Loader2 } from 'lucide-react';
+import { Save, Upload, Plus, Trash, Folder, Loader2, Menu, X } from 'lucide-react';
 
 export default function Home() {
   const { 
@@ -16,6 +16,7 @@ export default function Home() {
   const [selectedTargetId, setSelectedTargetId] = useState<number | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // State untuk Mobile
 
   useEffect(() => {
     async function initData() {
@@ -40,13 +41,12 @@ export default function Home() {
     initData();
   }, [setGlobalData]);
 
-  // Autocomplete Logic
   const filteredItems = useMemo(() => {
     if (!searchQuery || !itemsData) return [];
     const lowerQ = searchQuery.toLowerCase();
     return Object.values(itemsData)
       .filter((item: any) => item.name.toLowerCase().includes(lowerQ))
-      .slice(0, 15); // Batasi 15 hasil agar tidak lag
+      .slice(0, 15);
   }, [searchQuery, itemsData]);
 
   const handleCreateProject = () => {
@@ -58,6 +58,7 @@ export default function Home() {
     setNewProjName('');
     setSearchQuery('');
     setSelectedTargetId(null);
+    setIsSidebarOpen(false); // Tutup sidebar otomatis di HP setelah buat project
   };
 
   const activeProject = projects.find(p => p.id === activeProjectId);
@@ -70,10 +71,29 @@ export default function Home() {
   );
 
   return (
-    <div className="flex h-screen overflow-hidden text-sm">
-      {/* Sidebar */}
-      <div className="w-80 bg-slate-900 border-r border-slate-800 flex flex-col z-20">
-        <div className="p-4 border-b border-slate-800">
+    <div className="flex h-screen overflow-hidden text-sm relative bg-slate-950">
+      
+      {/* Mobile Header Toggle */}
+      <div className="md:hidden absolute top-4 left-4 z-50">
+        <button 
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="bg-slate-800 p-2 rounded-lg border border-slate-700 text-teal-400 shadow-xl"
+        >
+          {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
+      </div>
+
+      {/* Overlay untuk Mobile */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-30 md:hidden backdrop-blur-sm transition-opacity"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - Responsive */}
+      <div className={`fixed md:relative z-40 w-80 h-full bg-slate-900 border-r border-slate-800 flex flex-col transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        <div className="p-4 border-b border-slate-800 mt-12 md:mt-0">
           <h2 className="text-xl font-bold text-teal-400 flex items-center gap-2"><Folder className="w-5 h-5"/> Projects</h2>
         </div>
         
@@ -83,10 +103,9 @@ export default function Home() {
             placeholder="Nama Project (ex: Mass Portcullis)" 
             value={newProjName}
             onChange={(e) => setNewProjName(e.target.value)}
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 outline-none focus:border-teal-500"
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 outline-none focus:border-teal-500 transition-colors"
           />
           
-          {/* Autocomplete Input */}
           <div className="relative">
             <input 
               type="text" 
@@ -98,10 +117,10 @@ export default function Home() {
                 setSelectedTargetId(null);
               }}
               onFocus={() => setShowSuggestions(true)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 outline-none focus:border-teal-500"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 outline-none focus:border-teal-500 transition-colors"
             />
             {showSuggestions && searchQuery && filteredItems.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50">
+              <div className="absolute top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 custom-scrollbar">
                 {filteredItems.map(item => (
                   <div 
                     key={item.itemID} 
@@ -120,32 +139,34 @@ export default function Home() {
             )}
           </div>
 
-          <button onClick={handleCreateProject} className="w-full bg-teal-600 hover:bg-teal-500 text-white rounded-lg py-2 flex items-center justify-center gap-2 font-semibold transition">
+          <button onClick={handleCreateProject} className="w-full bg-teal-600 hover:bg-teal-500 text-white rounded-lg py-2 flex items-center justify-center gap-2 font-semibold transition-colors shadow-lg shadow-teal-900/20">
             <Plus className="w-4 h-4"/> Buat Project
           </button>
         </div>
 
-        {/* List Projects */}
-        <div className="flex-1 overflow-y-auto p-2">
+        <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
           {projects.map(p => (
             <div 
               key={p.id}
-              onClick={() => setActiveProject(p.id)}
-              className={`p-3 rounded-lg mb-2 cursor-pointer flex justify-between items-center group transition ${activeProjectId === p.id ? 'bg-teal-900/30 border border-teal-700/50 text-teal-200' : 'hover:bg-slate-800 text-slate-400'}`}
+              onClick={() => { setActiveProject(p.id); setIsSidebarOpen(false); }}
+              className={`p-3 rounded-lg mb-2 cursor-pointer flex justify-between items-center group transition-all duration-200 ${activeProjectId === p.id ? 'bg-teal-900/40 border border-teal-500/50 text-teal-200 shadow-md' : 'hover:bg-slate-800 text-slate-400 border border-transparent'}`}
             >
-              <div className="font-medium truncate">{p.name}</div>
-              <button onClick={(e) => { e.stopPropagation(); deleteProject(p.id); }} className="opacity-0 group-hover:opacity-100 hover:text-red-400 p-1">
+              <div className="font-medium truncate pr-2">{p.name}</div>
+              <button onClick={(e) => { e.stopPropagation(); deleteProject(p.id); }} className="opacity-0 group-hover:opacity-100 hover:text-red-400 p-1 transition-opacity">
                 <Trash className="w-4 h-4"/>
               </button>
             </div>
           ))}
+          {projects.length === 0 && (
+            <div className="text-center text-slate-600 mt-10 text-xs">Belum ada project</div>
+          )}
         </div>
 
         <div className="p-4 border-t border-slate-800 flex gap-2">
-          <button onClick={saveData} className="flex-1 bg-slate-800 hover:bg-slate-700 rounded-lg py-2 flex items-center justify-center gap-2 transition border border-slate-700">
+          <button onClick={saveData} className="flex-1 bg-slate-800 hover:bg-slate-700 rounded-lg py-2 flex items-center justify-center gap-2 transition-colors border border-slate-700">
             <Save className="w-4 h-4"/> Save
           </button>
-          <label className="flex-1 bg-slate-800 hover:bg-slate-700 rounded-lg py-2 flex items-center justify-center gap-2 transition border border-slate-700 cursor-pointer">
+          <label className="flex-1 bg-slate-800 hover:bg-slate-700 rounded-lg py-2 flex items-center justify-center gap-2 transition-colors border border-slate-700 cursor-pointer">
             <Upload className="w-4 h-4"/> Load
             <input type="file" accept=".json" className="hidden" onChange={(e) => {
                const file = e.target.files?.[0];
@@ -159,11 +180,13 @@ export default function Home() {
       </div>
 
       {/* Main Area */}
-      <div className="flex-1 bg-slate-950 flex flex-col relative z-10">
+      <div className="flex-1 flex flex-col relative w-full h-full overflow-hidden">
         {activeProject ? (
            <MassingTree project={activeProject} itemsData={itemsData} recipesData={recipesData} />
         ) : (
-          <div className="flex-1 flex items-center justify-center text-slate-500">Pilih atau buat project baru di sidebar.</div>
+          <div className="flex-1 flex items-center justify-center text-slate-500 px-4 text-center">
+            Pilih atau buat project baru di sidebar untuk memulai kalkulasi.
+          </div>
         )}
       </div>
     </div>
