@@ -290,7 +290,7 @@ function StockTab({ project, itemsData, recipesData }: any) {
               <div className="w-full md:w-36 mt-2 md:mt-0 shrink-0">
                  <div className="flex items-center gap-2 bg-zinc-950 rounded-lg px-3 py-2 border border-zinc-700 focus-within:border-purple-500 transition-colors">
                     <Package size={14} className="text-zinc-500" />
-                    <input type="number" min={0} value={stock || ''} onChange={(e) => updateStock(project.id, itemId, Number(e.target.value))} 
+                    <input type="number" min={0} value={stock || ''} onChange={(e) => updateStock(project.id, String(itemId), Number(e.target.value))}
                       className="bg-transparent w-full outline-none text-xs text-zinc-200 font-mono" placeholder="0" />
                  </div>
               </div>
