@@ -128,30 +128,19 @@ const getMaxDrop = (id: number) => TREE_MAX_DROPS[id] ?? 4;
 function fmt(n: number) { return n >= 1000 ? n.toLocaleString() : String(n); }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// AUTO-CORRECTION & SECURE RECIPE LOOKUP
+// SEED LOOKUP (CLEAN METHOD)
 // ──────────────────────────────────────────────────────────────────────────────
-function getCorrectedRecipe(id: number, itemsData: Record<number, any>, recipesData: Record<number, [number, number]>) {
+function getRecipe(id: number, itemsData: Record<number, any>, recipesData: Record<number, [number, number]>) {
+  // Cek langsung ke database Splicables
+  if (recipesData[id]) return recipesData[id];
+  
+  // Jika tidak ditemukan dan namanya eksplisit ' Seed', barulah kita meminjam resep dari (ID - 1)
   const item = itemsData[id];
-  const isSeedItem = item ? item.name.toLowerCase().endsWith('seed') : false;
-  
-  let recipe = recipesData[id];
-  if (!recipe && isSeedItem) {
-    recipe = recipesData[id - 1];
+  if (item && item.name.toLowerCase().endsWith(' seed') && recipesData[id - 1]) {
+    return recipesData[id - 1];
   }
-  
-  if (recipe) {
-    let [i1, i2] = recipe;
-    
-    if (item && (item.name.toLowerCase().includes('pastel') || item.name.toLowerCase().includes('paste '))) {
-      const magicEggObj = Object.values(itemsData).find((i: any) => i.name.toLowerCase() === 'magic egg');
-      const magicEggId = magicEggObj ? magicEggObj.itemID : 716;
-      
-      if (i1 === 610 || i1 === 611) i1 = magicEggId;
-      if (i2 === 610 || i2 === 611) i2 = magicEggId;
-    }
-    
-    return [i1, i2] as [number, number];
-  }
+
+  // Jika bukan 'Seed' (seperti Magic Egg yang merupakan item khusus), kembalikan null agar menjadi Base Item.
   return null;
 }
 
@@ -168,7 +157,7 @@ function generateTree(
   const edges: Edge[] = [];
 
   function traverse(id: number, depth: number, x: number, y: number, parentUid: string | null, direction: 'L' | 'R' | null, amountNeeded: number): number {
-    const recipe = getCorrectedRecipe(id, itemsData, recipesData);
+    const recipe = getRecipe(id, itemsData, recipesData);
     const isBase = !recipe;
     const isTruncated = !!recipe && depth >= project.maxDepth;
     const uid = parentUid ? `${parentUid}-${direction}-${id}` : `root-${id}`;
@@ -203,7 +192,7 @@ function generateTree(
 function getBaseRequirements(targetId: number, targetAmount: number, maxDepth: number, recipesData: Record<number, [number, number]>, seedReturnRate: number, itemsData: Record<number, any>) {
   const req: Record<number, number> = {};
   function walk(id: number, depth: number, amount: number) {
-    const recipe = getCorrectedRecipe(id, itemsData, recipesData);
+    const recipe = getRecipe(id, itemsData, recipesData);
     if (!recipe || depth >= maxDepth) { req[id] = (req[id] ?? 0) + amount; return; }
     const [i1, i2] = recipe;
     const splices = Math.ceil(amount / seedReturnRate);
@@ -216,7 +205,7 @@ function getBaseRequirements(targetId: number, targetAmount: number, maxDepth: n
 function countSplices(targetId: number, targetAmount: number, maxDepth: number, recipesData: Record<number, [number, number]>, seedReturnRate: number, itemsData: Record<number, any>) {
   let total = 0;
   function walk(id: number, depth: number, amount: number) {
-    const recipe = getCorrectedRecipe(id, itemsData, recipesData);
+    const recipe = getRecipe(id, itemsData, recipesData);
     if (!recipe || depth >= maxDepth) return;
     total += Math.ceil(amount / seedReturnRate);
     const [i1, i2] = recipe;
@@ -634,7 +623,7 @@ function StatsTab({ project, itemsData, recipesData }: any) {
 // MAIN COMPONENT EXPORT
 // ──────────────────────────────────────────────────────────────────────────────
 export default function MassingTree({ project, itemsData, recipesData }: any) {
-  const { setMaxDepth, setTargetAmount, setSeedReturnRate, projects } = useStore();
+  const { setMaxDepth, setTargetAmount, setSeedReturnRate, projects, loadData } = useStore();
   const [activeTab, setActiveTab] = useState<'tree' | 'stock' | 'harvest' | 'stats'>('tree');
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -650,13 +639,30 @@ export default function MassingTree({ project, itemsData, recipesData }: any) {
     setEdges(calcEdges);
   }, [calcNodes, calcEdges, setNodes, setEdges]);
 
+  useEffect(() => {
+    const savedData = localStorage.getItem('growmass_autosave_backup');
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        if (parsed && parsed.length > 0) {
+          loadData(parsed);
+        }
+      } catch (err) {
+        console.error("Gagal meload auto-save", err);
+      }
+    }
+  }, []);
+
   const [saveToast, setSaveToast] = useState(false);
   useEffect(() => {
+    if (!projects || projects.length === 0) return;
+
     const timer = setTimeout(() => {
       localStorage.setItem('growmass_autosave_backup', JSON.stringify(projects));
       setSaveToast(true);
       setTimeout(() => setSaveToast(false), 2000); 
     }, 1500); 
+    
     return () => clearTimeout(timer);
   }, [projects]);
 
