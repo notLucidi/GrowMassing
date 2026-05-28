@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 // ──────────────────────────────────────────────────────────────────────────────
-// CUSTOM STYLES (Di-inject agar UI langsung premium tanpa edit globals.css)
+// CUSTOM STYLES
 // ──────────────────────────────────────────────────────────────────────────────
 const INJECTED_CSS = `
   .glass-panel {
@@ -52,17 +52,33 @@ const INJECTED_CSS = `
 // DATA & HELPERS
 // ──────────────────────────────────────────────────────────────────────────────
 const TREE_MAX_DROPS: Record<number, number> = Object.fromEntries(
-  '2|16,4|16,10|8,14|16,16|52|16,54|8,56|8,58|8,100|8,102|8,104|12,116|16,118|8,162|8,164|8,166|8,168|8,170|8,172|8,174|8,176|8,178|8,180|8,182|8,184|8,186|8,198|8,200|8,248|8,260|8,284|8,324|8,336|12,340|8,378|8,380|8,412|8,414|8,416|8,418|8,420|8,422|8,424|8,426|8,432|8,434|8,436|8,440|8,442|16,454|8,460|8,510|8,512|8,514|8,516|8,518|8,520|8,522|8,526|8,554|8,596|8,612|8,620|8,626|8,628|8,630|8,632|8,634|8,636|8,638|8,640|8,642|8,644|8,646|8,648|8,654|8,682|8,668|8,832|8,850|8,856|8,880|8,884|8,888|8,944|8,954|8,1132|8,1134|8,1138|8,1154|8,1258|8,1260|8,1262|8,1264|8,1266|8,1268|8,1270|8,1300|8,1324|8,1498|8,1500|8,1536|8,1538|8,1554|8,1556|8,1558|8,1560|8,1562|8,1564|8,1566|8,1630|16,1654|8,1786|1,1787|1,1788|1,1789|1,1790|1,2008|8,2012|8,2014|8,2016|8,2020|8,2022|8,2024|8,2026|8,2028|8,2034|1,2035|1,2036|1,2037|1,2070|8,2786|8,2788|8,2790|8,2796|8,2808|8,2988|8,2990|8,3004|8,3080|8,3082|8,3084|8,3260|8,3472|8,3520|8,3556|8,3564|8,3838|8,3930|8,4308|8,4310|8,4312|8,4314|8,4316|8,4318|8,4490|1,4491|1,4584|8,4634|8,4636|8,4638|8,4640|8,4642|8,5666|8,5726|8,5728|8,5730|8,5990|8,6030|8,6032|8,6034|8,6386|8,6388|8,6542|8,6544|8,6808|8,6810|8,6812|8'
+  '2|16,4|16,10|8,14|16,16|16,52|16,54|8,56|8,58|8,100|8,102|8,104|12,116|16,118|8,162|8,164|8,166|8,168|8,170|8,172|8,174|8,176|8,178|8,180|8,182|8,184|8,186|8,198|8,200|8,248|8,260|8,284|8,324|8,336|12,340|8,378|8,380|8,412|8,414|8,416|8,418|8,420|8,422|8,424|8,426|8,432|8,434|8,436|8,440|8,442|16,454|8,460|8,510|8,512|8,514|8,516|8,518|8,520|8,522|8,526|8,554|8,596|8,612|8,620|8,626|8,628|8,630|8,632|8,634|8,636|8,638|8,640|8,642|8,644|8,646|8,648|8,654|8,682|8,668|8,832|8,850|8,856|8,880|8,884|8,888|8,944|8,954|8,1132|8,1134|8,1138|8,1154|8,1258|8,1260|8,1262|8,1264|8,1266|8,1268|8,1270|8,1300|8,1324|8,1498|8,1500|8,1536|8,1538|8,1554|8,1556|8,1558|8,1560|8,1562|8,1564|8,1566|8,1630|16,1654|8,1786|1,1787|1,1788|1,1789|1,1790|1,2008|8,2012|8,2014|8,2016|8,2020|8,2022|8,2024|8,2026|8,2028|8,2034|1,2035|1,2036|1,2037|1,2070|8,2786|8,2788|8,2790|8,2796|8,2808|8,2988|8,2990|8,3004|8,3080|8,3082|8,3084|8,3260|8,3472|8,3520|8,3556|8,3564|8,3838|8,3930|8,4308|8,4310|8,4312|8,4314|8,4316|8,4318|8,4490|1,4491|1,4584|8,4634|8,4636|8,4638|8,4640|8,4642|8,5666|8,5726|8,5728|8,5730|8,5990|8,6030|8,6032|8,6034|8,6386|8,6388|8,6542|8,6544|8,6808|8,6810|8,6812|8'
     .split(',')
     .map((s) => { const [k, v] = s.split('|'); return [Number(k), Number(v)]; })
 );
+
+const RARITY_TABLE: Record<number, number> = {
+  1: 22, 5: 44, 10: 71, 20: 125, 25: 153, 30: 174, 40: 269, 50: 378,
+  60: 501, 70: 638, 75: 711, 80: 788, 90: 951, 100: 1128
+};
+
+function getGemsPer100(rarity: number) {
+  const keys = Object.keys(RARITY_TABLE).map(Number).sort((a,b)=>a-b);
+  if (RARITY_TABLE[rarity]) return RARITY_TABLE[rarity];
+  let lower = keys[0], upper = keys[keys.length-1];
+  for (let i = 0; i < keys.length - 1; i++) {
+    if (rarity > keys[i] && rarity < keys[i+1]) { lower = keys[i]; upper = keys[i+1]; break; }
+  }
+  const ratio = (rarity - lower) / (upper - lower);
+  return RARITY_TABLE[lower] + ratio * (RARITY_TABLE[upper] - RARITY_TABLE[lower]);
+}
 
 const getMaxDrop = (id: number) => TREE_MAX_DROPS[id] ?? 4;
 function isFarmable(item: any) { return item && item.growTime > 0; }
 function fmt(n: number) { return n >= 1000 ? n.toLocaleString() : String(n); }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// ALGORITMA TREE GENERATION
+// TREE GENERATION
 // ──────────────────────────────────────────────────────────────────────────────
 const X_GAP = 340;
 const Y_GAP = 240;
@@ -135,7 +151,7 @@ function countSplices(targetId: number, targetAmount: number, maxDepth: number, 
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// UI COMPONENT: CUSTOM NODE (REACT FLOW)
+// CUSTOM NODE UI
 // ──────────────────────────────────────────────────────────────────────────────
 const CustomNode = React.memo(({ data }: { data: any }) => {
   const { toggleNodeDone, updateStock, activeProjectId, projects } = useStore();
@@ -154,7 +170,7 @@ const CustomNode = React.memo(({ data }: { data: any }) => {
       <Handle type="target" position={Position.Top} className="!bg-zinc-500 !border-none !w-8 !h-1.5 !rounded-full !-top-1" />
 
       <div className="flex gap-3 items-center mb-4">
-         <div className="w-12 h-12 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0 shadow-inner">
+         <div className="w-12 h-12 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0 shadow-inner overflow-hidden">
            <ItemImage itemID={data.id} name={data.item.name} rarity={data.item.rarity} className="w-8 h-8 object-contain" />
          </div>
          <div className="flex-1 min-w-0">
@@ -202,7 +218,7 @@ const CustomNode = React.memo(({ data }: { data: any }) => {
 
          <div className="flex items-center gap-2 bg-zinc-950 rounded-lg px-3 py-2 border border-zinc-800 focus-within:border-purple-500/50 transition-colors">
             <Package size={14} className="text-purple-400 shrink-0" />
-            <input type="number" min={0} value={data.stock || ''} onChange={(e) => activeProjectId && updateStock(activeProjectId, data.id, Number(e.target.value))} 
+            <input type="number" min={0} value={data.stock || ''} onChange={(e) => activeProjectId && updateStock(activeProjectId, String(data.id), Number(e.target.value))} 
               placeholder="Update stock..." className="bg-transparent w-full outline-none text-xs text-zinc-200 font-mono" />
          </div>
       </div>
@@ -258,7 +274,7 @@ function StockTab({ project, itemsData, recipesData }: any) {
           return (
             <div key={itemId} className="flex flex-col md:flex-row md:items-center gap-4 bg-zinc-900/60 p-4 rounded-xl border border-zinc-800 hover:border-zinc-700 transition-colors">
               <div className="flex items-center gap-4 w-full md:w-auto md:flex-1">
-                 <div className="w-10 h-10 shrink-0 bg-zinc-950 rounded-lg border border-zinc-800 flex items-center justify-center">
+                 <div className="w-10 h-10 shrink-0 bg-zinc-950 rounded-lg border border-zinc-800 flex items-center justify-center overflow-hidden">
                    <ItemImage itemID={itemId} name={item.name} rarity={item.rarity} className="w-7 h-7 object-contain" />
                  </div>
                  <div className="flex-1 min-w-0">
@@ -290,7 +306,7 @@ function StockTab({ project, itemsData, recipesData }: any) {
               <div className="w-full md:w-36 mt-2 md:mt-0 shrink-0">
                  <div className="flex items-center gap-2 bg-zinc-950 rounded-lg px-3 py-2 border border-zinc-700 focus-within:border-purple-500 transition-colors">
                     <Package size={14} className="text-zinc-500" />
-                    <input type="number" min={0} value={stock || ''} onChange={(e) => updateStock(project.id, String(itemId), Number(e.target.value))}
+                    <input type="number" min={0} value={stock || ''} onChange={(e) => updateStock(project.id, String(itemId), Number(e.target.value))} 
                       className="bg-transparent w-full outline-none text-xs text-zinc-200 font-mono" placeholder="0" />
                  </div>
               </div>
@@ -305,6 +321,14 @@ function StockTab({ project, itemsData, recipesData }: any) {
 // ──────────────────────────────────────────────────────────────────────────────
 // TAB: HARVEST
 // ──────────────────────────────────────────────────────────────────────────────
+const Toggle = ({ label, field, value, disabled = false, project, updateHarvestSettings }: any) => (
+  <label className={`flex items-center justify-between p-3 rounded-lg border border-transparent transition-colors ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-zinc-800/50 hover:border-zinc-800 cursor-pointer'}`}>
+    <span className="text-sm font-semibold text-zinc-300">{label}</span>
+    <input type="checkbox" disabled={disabled} checked={value} onChange={(e) => updateHarvestSettings(project.id, { [field]: e.target.checked })} 
+      className="w-5 h-5 accent-purple-500 rounded bg-zinc-900 border-zinc-700 cursor-pointer" />
+  </label>
+);
+
 function HarvestTab({ project, itemsData }: any) {
   const { updateHarvestSettings } = useStore();
   const hs = project.harvestSettings;
@@ -317,31 +341,66 @@ function HarvestTab({ project, itemsData }: any) {
   }, [searchQ, itemsData]);
 
   const targetItem = hs.harvestTargetId ? itemsData[hs.harvestTargetId] : null;
-  const maxDrop = hs.harvestTargetId ? getMaxDrop(hs.harvestTargetId) : 4;
 
   const calcResult = useMemo(() => {
-    if (!hs.numTrees || !hs.harvestTargetId) return null;
-    const base = hs.magplant ? maxDrop : (1 + maxDrop) / 2;
-    const extras = (hs.farmerRole ? 1 : 0) + (hs.ringOfFlowers ? 1 : 0);
-    const withExtras = base + extras;
-    const final = hs.goldenBooster ? withExtras * 2 : withExtras;
-    const total = Math.floor(final * hs.numTrees);
+    if (!hs.numTrees || !hs.harvestTargetId || !targetItem) return null;
     
-    const gemsPerTree = Math.floor(((targetItem?.rarity || 1) / 4) * final);
-    const totalGems = gemsPerTree * hs.numTrees;
+    // 1. Avg Fruit per Tree 
+    // Berdasarkan rumus: Farmable = Max Drop 8 -> Avg 4, Unfarmable = Max Drop 4 -> Avg 2
+    const isFarm = getMaxDrop(targetItem.itemID) >= 8;
+    const baseFruit = isFarm ? 4 : 2;
+    
+    // Harvest Modifiers (Menambah Block Drop)
+    let harvestMod = 0;
+    if (hs.hos && hs.fuel) harvestMod += 0.10;
+    if (hs.dcs) harvestMod += 0.02;
+    
+    const avgFruitFinal = baseFruit * (1 + harvestMod);
+    const totalBlocksHarvested = Math.floor(hs.numTrees * avgFruitFinal);
+    
+    // 2. Breaking Modifiers (Menambah Extra Block / Seed)
+    let breakMod = 0;
+    if (hs.ancesBlue) breakMod += 0.10; 
+    if (hs.builder) breakMod += 0.03;
+    
+    const totalBlocksBroken = Math.floor(totalBlocksHarvested * (1 + breakMod));
+    
+    // 3. Seed Yield (Standard 27.27%)
+    const seedsGained = Math.floor(totalBlocksBroken * 0.2727);
+    const seedProfit = seedsGained - hs.numTrees;
+    
+    // 4. Gem Yield
+    const gemsPer100 = getGemsPer100(targetItem.rarity || 1);
+    const baseGems = (totalBlocksBroken / 100) * gemsPer100;
+    
+    let gemMod = 0;
+    if (hs.ancesRed) gemMod += 0.05;
+    if (hs.gemini) gemMod += 0.05;
+    if (hs.farmer) gemMod += 0.05;
+    
+    const totalGems = Math.round(baseGems * (1 + gemMod));
 
-    return { perTree: final.toFixed(1), total, totalGems, seedsBack: hs.numTrees };
-  }, [hs, maxDrop, targetItem]);
+    return { 
+      avgFruitFinal: avgFruitFinal.toFixed(2), 
+      totalBlocks: totalBlocksHarvested, 
+      totalBlocksBroken,
+      seedsGained,
+      seedProfit,
+      totalGems 
+    };
+  }, [hs, targetItem]);
 
   return (
-    <div className="p-4 md:p-6 max-w-3xl mx-auto flex flex-col gap-6 pb-24">
+    <div className="p-4 md:p-6 max-w-4xl mx-auto flex flex-col gap-6 pb-24">
+      
+      {/* Target Section */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-lg">
         <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-2">
-          <Leaf size={14} className="text-emerald-500" /> Select Target
+          <Leaf size={14} className="text-emerald-500" /> Select Seed Target
         </h3>
         <div className="relative" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as any)) setShowDrop(false); }}>
           <input className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-200 outline-none focus:border-purple-500 transition-colors"
-            placeholder="Search farmable item..." value={searchQ || targetItem?.name || ''} onChange={(e) => { setSearchQ(e.target.value); setShowDrop(true); }} onFocus={() => setShowDrop(true)} />
+            placeholder="Search item to plant..." value={searchQ || targetItem?.name || ''} onChange={(e) => { setSearchQ(e.target.value); setShowDrop(true); }} onFocus={() => setShowDrop(true)} />
           {showDrop && searchResults.length > 0 && (
             <div className="absolute top-full mt-2 left-0 right-0 bg-zinc-900 border border-zinc-700 rounded-xl overflow-hidden z-50 shadow-2xl">
               {searchResults.map((it: any) => (
@@ -350,7 +409,7 @@ function HarvestTab({ project, itemsData }: any) {
                   <ItemImage itemID={it.itemID} name={it.name} rarity={it.rarity} className="w-7 h-7 object-contain rounded" />
                   <div>
                     <div className="text-sm font-bold text-zinc-200">{it.name}</div>
-                    <div className="text-[10px] font-mono text-zinc-500">Max Drop: {getMaxDrop(it.itemID)} · {it.growTime > 0 ? 'Farmable' : 'Not farmable'}</div>
+                    <div className="text-[10px] font-mono text-zinc-500">Max Drop: {getMaxDrop(it.itemID)} · {getMaxDrop(it.itemID) >= 8 ? 'Farmable' : 'Unfarmable'}</div>
                   </div>
                 </div>
               ))}
@@ -359,52 +418,65 @@ function HarvestTab({ project, itemsData }: any) {
         </div>
       </div>
 
+      {/* Config Section */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-lg">
         <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-2">
-          <Settings2 size={14} className="text-purple-500" /> Modifiers Config
+          <Settings2 size={14} className="text-purple-500" /> Harvesting & Breaking Modifiers
         </h3>
+        
         <div className="mb-5">
-          <label className="block text-xs font-bold text-zinc-300 mb-2">Number of Trees to Harvest</label>
+          <label className="block text-xs font-bold text-zinc-300 mb-2">Number of Seeds to Plant</label>
           <input type="number" min={1} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-purple-400 font-mono font-bold outline-none focus:border-purple-500"
             value={hs.numTrees} onChange={(e) => updateHarvestSettings(project.id, { numTrees: Number(e.target.value) })} />
         </div>
-        <div className="space-y-1">
-          {[
-            { label: '🧲 Magplant Remote (Guaranteed Max Drops)', field: 'magplant' },
-            { label: '✨ Golden Booster (Drops ×2)', field: 'goldenBooster' },
-            { label: '🌾 Farmer Role (Level +1 Extra Fruit)', field: 'farmerRole' },
-            { label: '💍 Ring of Flowers (+1 Extra Fruit)', field: 'ringOfFlowers' }
-          ].map((item) => (
-            <label key={item.field} className="flex items-center justify-between p-3 rounded-lg hover:bg-zinc-800/50 cursor-pointer border border-transparent hover:border-zinc-800 transition-colors">
-              <span className="text-sm font-semibold text-zinc-300">{item.label}</span>
-              <input type="checkbox" checked={hs[item.field as keyof typeof hs] as boolean} onChange={(e) => updateHarvestSettings(project.id, { [item.field]: e.target.checked })} 
-                className="w-5 h-5 accent-purple-500 rounded bg-zinc-900 border-zinc-700" />
-            </label>
-          ))}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1 bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50">
+            <div className="text-[10px] font-black uppercase text-emerald-500 mb-2 px-2">🌿 Harvesting Gear (Extra Blocks)</div>
+            <Toggle label="Harvester of Sorrow (HoS)" field="hos" value={hs.hos} project={project} updateHarvestSettings={updateHarvestSettings} />
+            <Toggle label="Fuel Pack (+10% Double Fruit)" field="fuel" value={hs.fuel} disabled={!hs.hos} project={project} updateHarvestSettings={updateHarvestSettings} />
+            <Toggle label="Dream Catcher Staff (+2% Block)" field="dcs" value={hs.dcs} project={project} updateHarvestSettings={updateHarvestSettings} />
+          </div>
+
+          <div className="space-y-1 bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50">
+            <div className="text-[10px] font-black uppercase text-blue-500 mb-2 px-2">🔨 Breaking Gear (Extra Seed & Gems)</div>
+            <Toggle label="Ancestral Tesseract (+10% Seed)" field="ancesBlue" value={hs.ancesBlue} project={project} updateHarvestSettings={updateHarvestSettings} />
+            <Toggle label="Builder Role (+3% Seed)" field="builder" value={hs.builder} project={project} updateHarvestSettings={updateHarvestSettings} />
+            <Toggle label="Ancestral Lens (+5% Gems)" field="ancesRed" value={hs.ancesRed} project={project} updateHarvestSettings={updateHarvestSettings} />
+            <Toggle label="Gemini Ring (+5% Gems)" field="gemini" value={hs.gemini} project={project} updateHarvestSettings={updateHarvestSettings} />
+            <Toggle label="Farmer Role (+5% Gems)" field="farmer" value={hs.farmer} project={project} updateHarvestSettings={updateHarvestSettings} />
+          </div>
         </div>
       </div>
 
+      {/* Results Section */}
       {calcResult && (
         <div className="bg-emerald-950/20 border border-emerald-900/50 rounded-2xl p-5 shadow-lg glow-emerald">
           <h3 className="text-xs font-black uppercase tracking-widest text-emerald-500 mb-4 flex items-center gap-2">
-            <BarChart3 size={14} /> Harvest Estimations
+            <BarChart3 size={14} /> Cycle Estimations (Seed ➡ Block ➡ Seed)
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-zinc-950/50 rounded-xl p-3 border border-zinc-800/50 text-center">
-              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wide mb-1">Avg Fruit/Tree</div>
-              <div className="text-lg font-black text-zinc-200 font-mono">{calcResult.perTree}</div>
+              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wide mb-1">Harvested Blocks</div>
+              <div className="text-lg font-black text-emerald-400 font-mono">{fmt(calcResult.totalBlocks)}</div>
+              <div className="text-[9px] text-zinc-500 mt-1">Avg {calcResult.avgFruitFinal} fruits/tree</div>
             </div>
             <div className="bg-zinc-950/50 rounded-xl p-3 border border-zinc-800/50 text-center">
-              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wide mb-1">Total Fruits</div>
-              <div className="text-lg font-black text-emerald-400 font-mono">{fmt(calcResult.total)}</div>
-            </div>
-            <div className="bg-zinc-950/50 rounded-xl p-3 border border-zinc-800/50 text-center">
-              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wide mb-1">Seeds Return</div>
-              <div className="text-lg font-black text-blue-400 font-mono">{fmt(calcResult.seedsBack)}</div>
-            </div>
-            <div className="bg-zinc-950/50 rounded-xl p-3 border border-zinc-800/50 text-center">
-              <div className="text-[10px] text-purple-500 font-bold uppercase tracking-wide mb-1 flex items-center justify-center gap-1"><Gem size={10}/> Est. Gems</div>
+              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wide mb-1 flex items-center justify-center gap-1"><Gem size={10}/> Est. Gems</div>
               <div className="text-lg font-black text-purple-400 font-mono">{fmt(calcResult.totalGems)}</div>
+              <div className="text-[9px] text-zinc-500 mt-1">From breaking {fmt(calcResult.totalBlocksBroken)} blks</div>
+            </div>
+            <div className="bg-zinc-950/50 rounded-xl p-3 border border-zinc-800/50 text-center">
+              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wide mb-1">Total Seed Given</div>
+              <div className="text-lg font-black text-blue-400 font-mono">{fmt(calcResult.seedsGained)}</div>
+              <div className="text-[9px] text-zinc-500 mt-1">~27.27% Drop Rate</div>
+            </div>
+            <div className="bg-zinc-950/50 rounded-xl p-3 border border-zinc-800/50 text-center">
+              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wide mb-1">Net Seed Profit</div>
+              <div className={`text-lg font-black font-mono ${calcResult.seedProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {calcResult.seedProfit > 0 ? '+' : ''}{fmt(calcResult.seedProfit)}
+              </div>
+              <div className="text-[9px] text-zinc-500 mt-1">Modal {fmt(hs.numTrees)} seed</div>
             </div>
           </div>
         </div>
