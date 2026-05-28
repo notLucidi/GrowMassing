@@ -51,6 +51,57 @@ const INJECTED_CSS = `
 // ──────────────────────────────────────────────────────────────────────────────
 // DATA & HELPERS
 // ──────────────────────────────────────────────────────────────────────────────
+const FARMABLE_NAMES = new Set([
+  "air duct", "alien block", "amber glass", "aqua block", "autumn leaf block", "autumn viney block",
+  "autumn viney wallpaper", "barn block", "black block", "blackrock wall", "blue block",
+  "blue star wallpaper", "blue royal wallpaper", "boulder", "bountiful bamboo background",
+  "bountiful bamboo ladder", "bountiful bamboo platform", "bountiful bamboo spikes",
+  "bountiful climbing hydrangea lattice", "bountiful corpse flower", "bountiful flowering garland",
+  "bountiful flowering lattice", "bountiful growtopian-eating looming plant", "bountiful jungle temple",
+  "bountiful jungle temple background", "bountiful jungle temple door", "bountiful jungle temple pillar",
+  "bountiful lattice fence", "bountiful monkshood", "bountiful white doll's eyes", "bricks",
+  "brick background", "brown block", "cave background", "cave dirt", "chandelier", "checker wallpaper",
+  "clouds background", "cobblestone block", "copper plumbing", "coral", "dark aqua block",
+  "dark blue block", "dark brown block", "dark cave background", "dark green block", "dark grey block",
+  "dark orange block", "dark purple block", "dark red block", "dark yellow block", "death spikes",
+  "deep rock", "deep sand", "dirt", "director's chair", "dwarven background", "dwarven wall",
+  "egg shell spikes", "evil brick background", "evil bricks", "fertile soil block", "fish tank",
+  "flowery wallpaper", "frozen stone cliffs", "garbage", "glacier background", "glass pane",
+  "golden block", "grass", "green block", "grey block", "grimstone", "hanging guytrap",
+  "heartcastle stone", "heartcastle stone background", "high tech block", "ice", "igneous rock",
+  "ion conduit", "ladder", "laser grid", "lattice background", "lava", "lava cube", "lava rock",
+  "leaf block", "lovewillow's lace", "lovewillow", "magic bell", "magic infused stone",
+  "magic infused stone background", "marble block", "mars rock", "martian soil", "martian tree",
+  "monochromatic dirt", "monochromatic cave background", "monochromatic lava", "mossy cobblestone block",
+  "ocean rock", "orange block", "orange stuff", "pastel aqua block", "pastel aqua flower block",
+  "pastel blue block", "pastel blue flower block", "pastel bunny block", "pastel bricks",
+  "pastel checkered wallpaper", "pastel green block", "pastel green flower block", "pastel mondrian block",
+  "pastel orange block", "pastel orange flower block", "pastel pink block", "pastel pink flower block",
+  "pastel purple block", "pastel purple flower block", "pastel yellow block", "pastel yellow flower block",
+  "pencil", "pepper tree", "pinball bumper", "purple block", "purple stuff", "red block", "red bricks",
+  "red royal wallpaper", "red wood wall", "rice", "rock", "rock background", "rock platform",
+  "roshambo block", "sand", "sandstone wall", "sheet music: blank", "sheet music: bass note",
+  "sheet music: drums", "sheet music: electric guitar", "sheet music: flat bass", "sheet music: flat piano",
+  "sheet music: flat sax", "sheet music: flute note", "sheet music: lyre note", "sheet music: piano note",
+  "sheet music: sax note", "sheet music: sharp bass", "sheet music: sharp piano", "sheet music: sharp sax",
+  "sheet music: spanish guitar note", "sheet music: repeat begin", "sheet music: repeat end",
+  "sheet music: violin note", "sorcerer stone", "space connector", "space dirt", "space dirt background",
+  "space junk background", "space junk dirt", "starship floor tile", "starship floor grill",
+  "starship light wall", "starship wall", "steam tubes", "steel block", "stone wall", "stripey wallpaper",
+  "sugar cane", "surgical block", "surgical background", "table lamp", "tangram block", "texas limestone",
+  "treasure chest", "venus guytrap", "viney block", "viney wallpaper", "wall like an egyptian",
+  "weeping willow branch", "weeping willow foliage", "wheat", "white block", "window", "wood block",
+  "wooden background", "wooden platform", "wooden window", "writing desk", "xenoid block", "yellow block"
+]);
+
+function isFarmable(item: any) {
+  if (!item || !item.name) return false;
+  let baseName = item.name.toLowerCase().replace(' seed', '').trim();
+  if (FARMABLE_NAMES.has(baseName)) return true;
+  if (baseName.startsWith('tangram block')) return true;
+  return false;
+}
+
 const TREE_MAX_DROPS: Record<number, number> = Object.fromEntries(
   '2|16,4|16,10|8,14|16,16|16,52|16,54|8,56|8,58|8,100|8,102|8,104|12,116|16,118|8,162|8,164|8,166|8,168|8,170|8,172|8,174|8,176|8,178|8,180|8,182|8,184|8,186|8,198|8,200|8,248|8,260|8,284|8,324|8,336|12,340|8,378|8,380|8,412|8,414|8,416|8,418|8,420|8,422|8,424|8,426|8,432|8,434|8,436|8,440|8,442|16,454|8,460|8,510|8,512|8,514|8,516|8,518|8,520|8,522|8,526|8,554|8,596|8,612|8,620|8,626|8,628|8,630|8,632|8,634|8,636|8,638|8,640|8,642|8,644|8,646|8,648|8,654|8,682|8,668|8,832|8,850|8,856|8,880|8,884|8,888|8,944|8,954|8,1132|8,1134|8,1138|8,1154|8,1258|8,1260|8,1262|8,1264|8,1266|8,1268|8,1270|8,1300|8,1324|8,1498|8,1500|8,1536|8,1538|8,1554|8,1556|8,1558|8,1560|8,1562|8,1564|8,1566|8,1630|16,1654|8,1786|1,1787|1,1788|1,1789|1,1790|1,2008|8,2012|8,2014|8,2016|8,2020|8,2022|8,2024|8,2026|8,2028|8,2034|1,2035|1,2036|1,2037|1,2070|8,2786|8,2788|8,2790|8,2796|8,2808|8,2988|8,2990|8,3004|8,3080|8,3082|8,3084|8,3260|8,3472|8,3520|8,3556|8,3564|8,3838|8,3930|8,4308|8,4310|8,4312|8,4314|8,4316|8,4318|8,4490|1,4491|1,4584|8,4634|8,4636|8,4638|8,4640|8,4642|8,5666|8,5726|8,5728|8,5730|8,5990|8,6030|8,6032|8,6034|8,6386|8,6388|8,6542|8,6544|8,6808|8,6810|8,6812|8'
     .split(',')
@@ -73,12 +124,38 @@ function getGemsPer100(rarity: number) {
   return RARITY_TABLE[lower] + ratio * (RARITY_TABLE[upper] - RARITY_TABLE[lower]);
 }
 
-const getMaxDrop = (id: number) => TREE_MAX_DROPS[id] ?? 4;
-function isFarmable(item: any) { return item && item.growTime > 0; }
 function fmt(n: number) { return n >= 1000 ? n.toLocaleString() : String(n); }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// TREE GENERATION (Fixed Seed Lookup Bug)
+// AUTO-CORRECTION & SECURE RECIPE LOOKUP
+// ──────────────────────────────────────────────────────────────────────────────
+function getCorrectedRecipe(id: number, itemsData: Record<number, any>, recipesData: Record<number, [number, number]>) {
+  const item = itemsData[id];
+  const isSeedItem = item ? item.name.toLowerCase().endsWith('seed') : false;
+  
+  let recipe = recipesData[id];
+  if (!recipe && isSeedItem) {
+    recipe = recipesData[id - 1];
+  }
+  
+  if (recipe) {
+    let [i1, i2] = recipe;
+    
+    if (item && (item.name.toLowerCase().includes('pastel') || item.name.toLowerCase().includes('paste '))) {
+      const magicEggObj = Object.values(itemsData).find((i: any) => i.name.toLowerCase() === 'magic egg');
+      const magicEggId = magicEggObj ? magicEggObj.itemID : 716;
+      
+      if (i1 === 610 || i1 === 611) i1 = magicEggId;
+      if (i2 === 610 || i2 === 611) i2 = magicEggId;
+    }
+    
+    return [i1, i2] as [number, number];
+  }
+  return null;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// TREE GENERATION
 // ──────────────────────────────────────────────────────────────────────────────
 const X_GAP = 340;
 const Y_GAP = 240;
@@ -90,17 +167,15 @@ function generateTree(
   const edges: Edge[] = [];
 
   function traverse(id: number, depth: number, x: number, y: number, parentUid: string | null, direction: 'L' | 'R' | null, amountNeeded: number): number {
-    // FIX: Gunakan [id - 1] agar jika Seed yang dicari, sistem akan membaca resep Block-nya.
-    const recipe = recipesData[id] || recipesData[id - 1]; 
+    const recipe = getCorrectedRecipe(id, itemsData, recipesData);
     const isBase = !recipe;
     const isTruncated = !!recipe && depth >= project.maxDepth;
     const uid = parentUid ? `${parentUid}-${direction}-${id}` : `root-${id}`;
     const stock = project.currentStock[id] ?? 0;
     const actualNeeded = Math.max(0, amountNeeded - stock);
     const item = itemsData[id] ?? { name: `#${id}`, rarity: 0, itemID: id, growTime: 0, breakHits: 4 };
-    const maxDrop = getMaxDrop(id);
 
-    const data = { id, uid, depth, isBase, isTruncated, amountNeeded, actualNeeded, stock, item, farmable: isFarmable(item), maxDrop };
+    const data = { id, uid, depth, isBase, isTruncated, amountNeeded, actualNeeded, stock, item, farmable: isFarmable(item) };
 
     let leftW = 0, rightW = 0;
     if (!isBase && !isTruncated) {
@@ -124,11 +199,10 @@ function generateTree(
   return { nodes, edges };
 }
 
-function getBaseRequirements(targetId: number, targetAmount: number, maxDepth: number, recipesData: Record<number, [number, number]>, seedReturnRate: number) {
+function getBaseRequirements(targetId: number, targetAmount: number, maxDepth: number, recipesData: Record<number, [number, number]>, seedReturnRate: number, itemsData: Record<number, any>) {
   const req: Record<number, number> = {};
   function walk(id: number, depth: number, amount: number) {
-    // FIX BUG: Fallback pencarian resep Block
-    const recipe = recipesData[id] || recipesData[id - 1]; 
+    const recipe = getCorrectedRecipe(id, itemsData, recipesData);
     if (!recipe || depth >= maxDepth) { req[id] = (req[id] ?? 0) + amount; return; }
     const [i1, i2] = recipe;
     const splices = Math.ceil(amount / seedReturnRate);
@@ -138,11 +212,10 @@ function getBaseRequirements(targetId: number, targetAmount: number, maxDepth: n
   return req;
 }
 
-function countSplices(targetId: number, targetAmount: number, maxDepth: number, recipesData: Record<number, [number, number]>, seedReturnRate: number) {
+function countSplices(targetId: number, targetAmount: number, maxDepth: number, recipesData: Record<number, [number, number]>, seedReturnRate: number, itemsData: Record<number, any>) {
   let total = 0;
   function walk(id: number, depth: number, amount: number) {
-    // FIX BUG: Fallback pencarian resep Block
-    const recipe = recipesData[id] || recipesData[id - 1];
+    const recipe = getCorrectedRecipe(id, itemsData, recipesData);
     if (!recipe || depth >= maxDepth) return;
     total += Math.ceil(amount / seedReturnRate);
     const [i1, i2] = recipe;
@@ -243,8 +316,8 @@ const nodeTypes = { gm_node: CustomNode };
 // TAB: STOCK
 // ──────────────────────────────────────────────────────────────────────────────
 function StockTab({ project, itemsData, recipesData }: any) {
+  const requirements = useMemo(() => getBaseRequirements(project.targetId, project.targetAmount, project.maxDepth, recipesData, project.seedReturnRate, itemsData), [project, recipesData, itemsData]);
   const { updateStock } = useStore();
-  const requirements = useMemo(() => getBaseRequirements(project.targetId, project.targetAmount, project.maxDepth, recipesData, project.seedReturnRate), [project, recipesData]);
 
   const sorted = useMemo(() => Object.entries(requirements).map(([id, total]) => {
       const itemId = Number(id);
@@ -348,7 +421,7 @@ function HarvestTab({ project, itemsData }: any) {
   const calcResult = useMemo(() => {
     if (!hs.numTrees || !hs.harvestTargetId || !targetItem) return null;
     
-    const isFarm = getMaxDrop(targetItem.itemID) >= 8;
+    const isFarm = isFarmable(targetItem);
     const baseFruit = isFarm ? 4 : 2;
     
     let harvestMod = 0;
@@ -405,7 +478,7 @@ function HarvestTab({ project, itemsData }: any) {
                   <ItemImage itemID={it.itemID} name={it.name} rarity={it.rarity} className="w-7 h-7 object-contain rounded" />
                   <div>
                     <div className="text-sm font-bold text-zinc-200">{it.name}</div>
-                    <div className="text-[10px] font-mono text-zinc-500">Max Drop: {getMaxDrop(it.itemID)} · {getMaxDrop(it.itemID) >= 8 ? 'Farmable' : 'Unfarmable'}</div>
+                    <div className="text-[10px] font-mono text-zinc-500">Max Drop: {getMaxDrop(it.itemID)} · {isFarmable(it) ? 'Farmable' : 'Unfarmable (Seed Loss)'}</div>
                   </div>
                 </div>
               ))}
@@ -483,8 +556,8 @@ function HarvestTab({ project, itemsData }: any) {
 // TAB: STATS
 // ──────────────────────────────────────────────────────────────────────────────
 function StatsTab({ project, itemsData, recipesData }: any) {
-  const requirements = useMemo(() => getBaseRequirements(project.targetId, project.targetAmount, project.maxDepth, recipesData, project.seedReturnRate), [project, recipesData]);
-  const totalSplices = useMemo(() => countSplices(project.targetId, project.targetAmount, project.maxDepth, recipesData, project.seedReturnRate), [project, recipesData]);
+  const requirements = useMemo(() => getBaseRequirements(project.targetId, project.targetAmount, project.maxDepth, recipesData, project.seedReturnRate, itemsData), [project, recipesData, itemsData]);
+  const totalSplices = useMemo(() => countSplices(project.targetId, project.targetAmount, project.maxDepth, recipesData, project.seedReturnRate, itemsData), [project, recipesData, itemsData]);
 
   const baseEntries = Object.entries(requirements).map(([id, total]) => {
     const itemId = Number(id);
@@ -541,7 +614,7 @@ function StatsTab({ project, itemsData, recipesData }: any) {
                 <div className="text-sm font-bold text-zinc-200 truncate">{item.name}</div>
                 <div className="flex gap-2 mt-1">
                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono"><Hammer size={8} className="inline mr-1 -mt-0.5"/> {item.breakHits || 4}</span>
-                  {item.growTime > 0 ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950/50 text-emerald-400">Farmable</span> : <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-950/50 text-red-400">Seed Loss</span>}
+                  {isFarmable(item) ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950/50 text-emerald-400">Farmable</span> : <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-950/50 text-red-400">Seed Loss</span>}
                 </div>
               </div>
               <div className="text-right">
