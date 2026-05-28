@@ -124,6 +124,7 @@ function getGemsPer100(rarity: number) {
   return RARITY_TABLE[lower] + ratio * (RARITY_TABLE[upper] - RARITY_TABLE[lower]);
 }
 
+const getMaxDrop = (id: number) => TREE_MAX_DROPS[id] ?? 4;
 function fmt(n: number) { return n >= 1000 ? n.toLocaleString() : String(n); }
 
 // ──────────────────────────────────────────────────────────────────────────────
