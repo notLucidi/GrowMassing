@@ -9,8 +9,8 @@ import 'reactflow/dist/style.css';
 import { useStore, ProjectState } from '../store/useStore';
 import ItemImage from './ItemImage';
 import {
-  Check, Hammer, Leaf, FlameKindling, Droplets, Wind, Mountain,
-  Package, TreePine, Wheat, BarChart3, Settings2, AlertCircle, Zap, Gem, Save
+  Check, Hammer, Leaf, Package, TreePine, Wheat, 
+  BarChart3, Settings2, Gem, Save
 } from 'lucide-react';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -84,7 +84,7 @@ const X_GAP = 340;
 const Y_GAP = 240;
 
 function generateTree(
-  project: ProjectState, recipesData: Record<number, [number, number]>, itemsData: Record<number, any>, chiData: Record<number, string> = {}
+  project: ProjectState, recipesData: Record<number, [number, number]>, itemsData: Record<number, any>
 ) {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
@@ -99,7 +99,7 @@ function generateTree(
     const item = itemsData[id] ?? { name: `#${id}`, rarity: 0, itemID: id, growTime: 0, breakHits: 4 };
     const maxDrop = getMaxDrop(id);
 
-    const data = { id, uid, depth, isBase, isTruncated, amountNeeded, actualNeeded, stock, item, farmable: isFarmable(item), chi: chiData ? chiData[id] : undefined, maxDrop };
+    const data = { id, uid, depth, isBase, isTruncated, amountNeeded, actualNeeded, stock, item, farmable: isFarmable(item), maxDrop };
 
     let leftW = 0, rightW = 0;
     if (!isBase && !isTruncated) {
@@ -345,12 +345,9 @@ function HarvestTab({ project, itemsData }: any) {
   const calcResult = useMemo(() => {
     if (!hs.numTrees || !hs.harvestTargetId || !targetItem) return null;
     
-    // 1. Avg Fruit per Tree 
-    // Berdasarkan rumus: Farmable = Max Drop 8 -> Avg 4, Unfarmable = Max Drop 4 -> Avg 2
     const isFarm = getMaxDrop(targetItem.itemID) >= 8;
     const baseFruit = isFarm ? 4 : 2;
     
-    // Harvest Modifiers (Menambah Block Drop)
     let harvestMod = 0;
     if (hs.hos && hs.fuel) harvestMod += 0.10;
     if (hs.dcs) harvestMod += 0.02;
@@ -358,18 +355,15 @@ function HarvestTab({ project, itemsData }: any) {
     const avgFruitFinal = baseFruit * (1 + harvestMod);
     const totalBlocksHarvested = Math.floor(hs.numTrees * avgFruitFinal);
     
-    // 2. Breaking Modifiers (Menambah Extra Block / Seed)
     let breakMod = 0;
     if (hs.ancesBlue) breakMod += 0.10; 
     if (hs.builder) breakMod += 0.03;
     
     const totalBlocksBroken = Math.floor(totalBlocksHarvested * (1 + breakMod));
     
-    // 3. Seed Yield (Standard 27.27%)
     const seedsGained = Math.floor(totalBlocksBroken * 0.2727);
     const seedProfit = seedsGained - hs.numTrees;
     
-    // 4. Gem Yield
     const gemsPer100 = getGemsPer100(targetItem.rarity || 1);
     const baseGems = (totalBlocksBroken / 100) * gemsPer100;
     
@@ -393,7 +387,6 @@ function HarvestTab({ project, itemsData }: any) {
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto flex flex-col gap-6 pb-24">
       
-      {/* Target Section */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-lg">
         <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-2">
           <Leaf size={14} className="text-emerald-500" /> Select Seed Target
@@ -418,7 +411,6 @@ function HarvestTab({ project, itemsData }: any) {
         </div>
       </div>
 
-      {/* Config Section */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-lg">
         <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-2">
           <Settings2 size={14} className="text-purple-500" /> Harvesting & Breaking Modifiers
@@ -449,7 +441,6 @@ function HarvestTab({ project, itemsData }: any) {
         </div>
       </div>
 
-      {/* Results Section */}
       {calcResult && (
         <div className="bg-emerald-950/20 border border-emerald-900/50 rounded-2xl p-5 shadow-lg glow-emerald">
           <h3 className="text-xs font-black uppercase tracking-widest text-emerald-500 mb-4 flex items-center gap-2">
@@ -565,14 +556,14 @@ function StatsTab({ project, itemsData, recipesData }: any) {
 // ──────────────────────────────────────────────────────────────────────────────
 // MAIN COMPONENT EXPORT
 // ──────────────────────────────────────────────────────────────────────────────
-export default function MassingTree({ project, itemsData, recipesData, chiData = {} }: any) {
+export default function MassingTree({ project, itemsData, recipesData }: any) {
   const { setMaxDepth, setTargetAmount, setSeedReturnRate, projects } = useStore();
   const [activeTab, setActiveTab] = useState<'tree' | 'stock' | 'harvest' | 'stats'>('tree');
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [controlsOpen, setControlsOpen] = useState(false);
 
-  const { nodes: calcNodes, edges: calcEdges } = useMemo(() => generateTree(project, recipesData, itemsData, chiData), [project, recipesData, itemsData, chiData]);
+  const { nodes: calcNodes, edges: calcEdges } = useMemo(() => generateTree(project, recipesData, itemsData), [project, recipesData, itemsData]);
 
   useEffect(() => {
     setNodes((nds) => {
