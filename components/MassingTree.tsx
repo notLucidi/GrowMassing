@@ -660,20 +660,6 @@ export default function MassingTree({ project, itemsData, recipesData }: any) {
     setEdges(calcEdges);
   }, [calcNodes, calcEdges, setNodes, setEdges]);
 
-  useEffect(() => {
-    const savedData = localStorage.getItem('growmass_autosave_backup');
-    if (savedData) {
-      try {
-        const parsed = JSON.parse(savedData);
-        if (parsed && parsed.length > 0) {
-          loadData(parsed);
-        }
-      } catch (err) {
-        console.error("Gagal meload auto-save", err);
-      }
-    }
-  }, []);
-
   const [saveToast, setSaveToast] = useState(false);
   useEffect(() => {
     if (!projects || projects.length === 0) return;
