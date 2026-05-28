@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useEffect, useState, useCallback } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import ReactFlow, {
   Background, Controls, Handle, Position,
   Node, Edge, useNodesState, useEdgesState,
@@ -9,96 +9,81 @@ import 'reactflow/dist/style.css';
 import { useStore, ProjectState } from '../store/useStore';
 import ItemImage from './ItemImage';
 import {
-  Check, Edit2, Hammer, Leaf, FlameKindling, Droplets, Wind, Mountain,
-  ChevronDown, ChevronUp, TrendingUp, Package, Layers, TreePine,
-  Wheat, BarChart3, Settings2, AlertCircle, CheckCircle2, Zap,
+  Check, Hammer, Leaf, FlameKindling, Droplets, Wind, Mountain,
+  Package, TreePine, Wheat, BarChart3, Settings2, AlertCircle, Zap, Gem, Save
 } from 'lucide-react';
 
 // ──────────────────────────────────────────────────────────────────────────────
-// TREE FRUIT MAX DROPS (default = 4 if not listed)
+// CUSTOM STYLES (Di-inject agar UI langsung premium tanpa edit globals.css)
+// ──────────────────────────────────────────────────────────────────────────────
+const INJECTED_CSS = `
+  .glass-panel {
+    background: rgba(9, 9, 11, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  .glow-purple { box-shadow: 0 0 24px rgba(168, 85, 247, 0.15); }
+  .glow-emerald { box-shadow: 0 0 24px rgba(16, 185, 129, 0.15); }
+  
+  .mobile-tabbar { display: none; }
+  @media (max-width: 768px) {
+    .mobile-tabbar {
+      display: flex; position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(9, 9, 11, 0.95); backdrop-filter: blur(10px);
+      border-top: 1px solid rgba(255,255,255,0.05); z-index: 50;
+      padding-bottom: env(safe-area-inset-bottom, 12px);
+    }
+    .mob-tab {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 12px 0; font-size: 10px; color: #71717a; transition: all 0.2s; font-weight: 600;
+    }
+    .mob-tab.active { color: #a855f7; }
+    .mob-tab.active svg { transform: scale(1.1); color: #a855f7; }
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+`;
+
+// ──────────────────────────────────────────────────────────────────────────────
+// DATA & HELPERS
 // ──────────────────────────────────────────────────────────────────────────────
 const TREE_MAX_DROPS: Record<number, number> = Object.fromEntries(
-  '2|16,4|16,10|8,14|16,16|16,52|16,54|8,56|8,58|8,100|8,102|8,104|12,116|16,118|8,162|8,164|8,166|8,168|8,170|8,172|8,174|8,176|8,178|8,180|8,182|8,184|8,186|8,198|8,200|8,248|8,260|8,284|8,324|8,336|12,340|8,378|8,380|8,412|8,414|8,416|8,418|8,420|8,422|8,424|8,426|8,432|8,434|8,436|8,440|8,442|16,454|8,460|8,510|8,512|8,514|8,516|8,518|8,520|8,522|8,526|8,554|8,596|8,612|8,620|8,626|8,628|8,630|8,632|8,634|8,636|8,638|8,640|8,642|8,644|8,646|8,648|8,654|8,682|8,668|8,832|8,850|8,856|8,880|8,884|8,888|8,944|8,954|8,1132|8,1134|8,1138|8,1154|8,1258|8,1260|8,1262|8,1264|8,1266|8,1268|8,1270|8,1300|8,1324|8,1498|8,1500|8,1536|8,1538|8,1554|8,1556|8,1558|8,1560|8,1562|8,1564|8,1566|8,1630|16,1654|8,1786|1,1787|1,1788|1,1789|1,1790|1,2008|8,2012|8,2014|8,2016|8,2020|8,2022|8,2024|8,2026|8,2028|8,2034|1,2035|1,2036|1,2037|1,2070|8,2786|8,2788|8,2790|8,2796|8,2808|8,2988|8,2990|8,3004|8,3080|8,3082|8,3084|8,3260|8,3472|8,3520|8,3556|8,3564|8,3838|8,3930|8,4308|8,4310|8,4312|8,4314|8,4316|8,4318|8,4490|1,4491|1,4584|8,4634|8,4636|8,4638|8,4640|8,4642|8,5666|8,5726|8,5728|8,5730|8,5990|8,6030|8,6032|8,6034|8,6386|8,6388|8,6542|8,6544|8,6808|8,6810|8,6812|8'
+  '2|16,4|16,10|8,14|16,16|52|16,54|8,56|8,58|8,100|8,102|8,104|12,116|16,118|8,162|8,164|8,166|8,168|8,170|8,172|8,174|8,176|8,178|8,180|8,182|8,184|8,186|8,198|8,200|8,248|8,260|8,284|8,324|8,336|12,340|8,378|8,380|8,412|8,414|8,416|8,418|8,420|8,422|8,424|8,426|8,432|8,434|8,436|8,440|8,442|16,454|8,460|8,510|8,512|8,514|8,516|8,518|8,520|8,522|8,526|8,554|8,596|8,612|8,620|8,626|8,628|8,630|8,632|8,634|8,636|8,638|8,640|8,642|8,644|8,646|8,648|8,654|8,682|8,668|8,832|8,850|8,856|8,880|8,884|8,888|8,944|8,954|8,1132|8,1134|8,1138|8,1154|8,1258|8,1260|8,1262|8,1264|8,1266|8,1268|8,1270|8,1300|8,1324|8,1498|8,1500|8,1536|8,1538|8,1554|8,1556|8,1558|8,1560|8,1562|8,1564|8,1566|8,1630|16,1654|8,1786|1,1787|1,1788|1,1789|1,1790|1,2008|8,2012|8,2014|8,2016|8,2020|8,2022|8,2024|8,2026|8,2028|8,2034|1,2035|1,2036|1,2037|1,2070|8,2786|8,2788|8,2790|8,2796|8,2808|8,2988|8,2990|8,3004|8,3080|8,3082|8,3084|8,3260|8,3472|8,3520|8,3556|8,3564|8,3838|8,3930|8,4308|8,4310|8,4312|8,4314|8,4316|8,4318|8,4490|1,4491|1,4584|8,4634|8,4636|8,4638|8,4640|8,4642|8,5666|8,5726|8,5728|8,5730|8,5990|8,6030|8,6032|8,6034|8,6386|8,6388|8,6542|8,6544|8,6808|8,6810|8,6812|8'
     .split(',')
     .map((s) => { const [k, v] = s.split('|'); return [Number(k), Number(v)]; })
 );
 
-// ──────────────────────────────────────────────────────────────────────────────
-// HELPERS
-// ──────────────────────────────────────────────────────────────────────────────
 const getMaxDrop = (id: number) => TREE_MAX_DROPS[id] ?? 4;
-
-function isFarmable(item: any) {
-  return item && item.growTime > 0;
-}
-
-function chiIcon(chi?: string) {
-  switch (chi?.toUpperCase()) {
-    case 'FIRE':  return <FlameKindling size={10} />;
-    case 'WIND':  return <Wind size={10} />;
-    case 'WATER': return <Droplets size={10} />;
-    default:      return <Mountain size={10} />;
-  }
-}
-function chiClass(chi?: string) {
-  switch (chi?.toUpperCase()) {
-    case 'FIRE':  return 'chi-fire';
-    case 'WIND':  return 'chi-wind';
-    case 'WATER': return 'chi-water';
-    default:      return 'chi-earth';
-  }
-}
-
-function rarityColor(r: number) {
-  if (r >= 100) return '#fbbf24';
-  if (r >= 60)  return '#c084fc';
-  if (r >= 20)  return '#60a5fa';
-  return '#6ee7b7';
-}
-
-function fmt(n: number) {
-  return n >= 1000 ? n.toLocaleString() : String(n);
-}
+function isFarmable(item: any) { return item && item.growTime > 0; }
+function fmt(n: number) { return n >= 1000 ? n.toLocaleString() : String(n); }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// TREE GENERATION
+// ALGORITMA TREE GENERATION
 // ──────────────────────────────────────────────────────────────────────────────
-const X_GAP = 320;
-const Y_GAP = 220;
+const X_GAP = 340;
+const Y_GAP = 240;
 
 function generateTree(
-  project: ProjectState,
-  recipesData: Record<number, [number, number]>,
-  itemsData: Record<number, any>,
-  chiData: Record<number, string>
+  project: ProjectState, recipesData: Record<number, [number, number]>, itemsData: Record<number, any>, chiData: Record<number, string>
 ) {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
-  function traverse(
-    id: number, depth: number,
-    x: number, y: number,
-    parentUid: string | null,
-    direction: 'L' | 'R' | null,
-    amountNeeded: number
-  ): number {
+  function traverse(id: number, depth: number, x: number, y: number, parentUid: string | null, direction: 'L' | 'R' | null, amountNeeded: number): number {
     const recipe = recipesData[id];
     const isBase = !recipe;
     const isTruncated = !!recipe && depth >= project.maxDepth;
     const uid = parentUid ? `${parentUid}-${direction}-${id}` : `root-${id}`;
-
     const stock = project.currentStock[id] ?? 0;
     const actualNeeded = Math.max(0, amountNeeded - stock);
     const item = itemsData[id] ?? { name: `#${id}`, rarity: 0, itemID: id, growTime: 0, breakHits: 4 };
-    const farmable = isFarmable(item);
-    const chi = chiData[id];
     const maxDrop = getMaxDrop(id);
 
-    const data = {
-      id, uid, depth, isBase, isTruncated,
-      amountNeeded, actualNeeded, stock,
-      item, farmable, chi, maxDrop,
-    };
+    const data = { id, uid, depth, isBase, isTruncated, amountNeeded, actualNeeded, stock, item, farmable: isFarmable(item), chi: chiData[id], maxDrop };
 
     let leftW = 0, rightW = 0;
     if (!isBase && !isTruncated) {
@@ -106,7 +91,7 @@ function generateTree(
       const splicesReq = Math.ceil(actualNeeded / project.seedReturnRate);
       leftW  = traverse(i1, depth + 1, x, y + Y_GAP, uid, 'L', splicesReq);
       rightW = traverse(i2, depth + 1, x + leftW * X_GAP, y + Y_GAP, uid, 'R', splicesReq);
-      const edgeStyle = { stroke: '#1d3454', strokeWidth: 1.5 };
+      const edgeStyle = { stroke: '#3f3f46', strokeWidth: 2 };
       edges.push({ id: `e-${uid}-L`, source: uid, target: `${uid}-L-${i1}`, animated: false, style: edgeStyle });
       edges.push({ id: `e-${uid}-R`, source: uid, target: `${uid}-R-${i2}`, animated: false, style: edgeStyle });
     }
@@ -122,38 +107,20 @@ function generateTree(
   return { nodes, edges };
 }
 
-// Collect unique base item requirements
-function getBaseRequirements(
-  targetId: number,
-  targetAmount: number,
-  maxDepth: number,
-  recipesData: Record<number, [number, number]>,
-  seedReturnRate: number
-): Record<number, number> {
+function getBaseRequirements(targetId: number, targetAmount: number, maxDepth: number, recipesData: Record<number, [number, number]>, seedReturnRate: number) {
   const req: Record<number, number> = {};
   function walk(id: number, depth: number, amount: number) {
     const recipe = recipesData[id];
-    if (!recipe || depth >= maxDepth) {
-      req[id] = (req[id] ?? 0) + amount;
-      return;
-    }
+    if (!recipe || depth >= maxDepth) { req[id] = (req[id] ?? 0) + amount; return; }
     const [i1, i2] = recipe;
     const splices = Math.ceil(amount / seedReturnRate);
-    walk(i1, depth + 1, splices);
-    walk(i2, depth + 1, splices);
+    walk(i1, depth + 1, splices); walk(i2, depth + 1, splices);
   }
   walk(targetId, 0, targetAmount);
   return req;
 }
 
-// Count total splices (intermediate nodes)
-function countSplices(
-  targetId: number,
-  targetAmount: number,
-  maxDepth: number,
-  recipesData: Record<number, [number, number]>,
-  seedReturnRate: number
-): number {
+function countSplices(targetId: number, targetAmount: number, maxDepth: number, recipesData: Record<number, [number, number]>, seedReturnRate: number) {
   let total = 0;
   function walk(id: number, depth: number, amount: number) {
     const recipe = recipesData[id];
@@ -161,336 +128,171 @@ function countSplices(
     total += Math.ceil(amount / seedReturnRate);
     const [i1, i2] = recipe;
     const splices = Math.ceil(amount / seedReturnRate);
-    walk(i1, depth + 1, splices);
-    walk(i2, depth + 1, splices);
+    walk(i1, depth + 1, splices); walk(i2, depth + 1, splices);
   }
   walk(targetId, 0, targetAmount);
   return total;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// CUSTOM NODE
+// UI COMPONENT: CUSTOM NODE (REACT FLOW)
 // ──────────────────────────────────────────────────────────────────────────────
 const CustomNode = React.memo(({ data }: { data: any }) => {
-  const { toggleNodeDone, setNodeNote, updateStock, activeProjectId, projects } = useStore();
+  const { toggleNodeDone, updateStock, activeProjectId, projects } = useStore();
   const project = projects.find((p) => p.id === activeProjectId);
   const isDone = !!project?.doneNodes[data.uid];
-  const note = project?.notes[data.uid] ?? '';
-  const [showNote, setShowNote] = useState(false);
-  const [localNote, setLocalNote] = useState(note);
 
   const pct = data.amountNeeded > 0 ? Math.min(100, (data.stock / data.amountNeeded) * 100) : 100;
   const deficit = data.actualNeeded;
-
   const isRoot = data.depth === 0;
-  const borderColor = isRoot ? '#f59e0b' : data.isBase ? '#22c55e' : data.isTruncated ? '#475569' : '#254a78';
-  const bgColor = isRoot
-    ? 'rgba(30,20,5,0.95)'
-    : data.isBase
-    ? 'rgba(5,20,12,0.95)'
-    : data.isTruncated
-    ? 'rgba(8,12,20,0.85)'
-    : 'rgba(8,14,24,0.95)';
-
-  const progressColor = pct >= 100 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444';
+  
+  const borderColor = isRoot ? 'border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.2)]' : data.isBase ? 'border-emerald-500/50' : 'border-zinc-700';
+  const bgColor = isRoot ? 'bg-zinc-950/95' : 'bg-zinc-900/90';
 
   return (
-    <div
-      className="relative transition-all duration-200 hover:scale-[1.02]"
-      style={{
-        width: 268,
-        background: bgColor,
-        border: `1.5px solid ${borderColor}`,
-        borderRadius: 14,
-        boxShadow: `0 4px 24px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)`,
-        opacity: isDone ? 0.6 : 1,
-      }}
-    >
-      <Handle type="target" position={Position.Top}
-        style={{ background: borderColor, width: 56, height: 4, borderRadius: 2, top: -2, border: 'none' }} />
+    <div className={`relative w-[280px] p-4 rounded-2xl backdrop-blur-md transition-all duration-300 border ${borderColor} ${bgColor} ${isDone ? 'opacity-50 grayscale-[50%]' : ''}`}>
+      <Handle type="target" position={Position.Top} className="!bg-zinc-500 !border-none !w-8 !h-1.5 !rounded-full !-top-1" />
 
-      {/* Header */}
-      <div className="flex items-start gap-3 p-3 pb-2">
-        <div className="shrink-0 rounded-lg overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <ItemImage itemID={data.id} name={data.item.name} rarity={data.item.rarity} size={44} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-            {data.chi && (
-              <span className={`badge ${chiClass(data.chi)}`}>
-                {chiIcon(data.chi)} {data.chi}
-              </span>
-            )}
-            {data.isBase && (
-              <span className="badge badge-green"><Leaf size={8} /> Base</span>
-            )}
-            {isRoot && (
-              <span className="badge badge-amber">Target</span>
-            )}
-          </div>
-          <div className={`font-bold text-sm leading-tight ${isDone ? 'line-through opacity-50' : 'text-white'}`}
-            style={{ fontFamily: 'var(--font-nunito)' }}>
-            {data.item.name}
-          </div>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-[10px] font-mono" style={{ color: rarityColor(data.item.rarity), fontFamily: 'var(--font-mono)' }}>
-              R{data.item.rarity}
-            </span>
-            <span className="text-[10px]" style={{ color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
-              #{data.id}
-            </span>
-          </div>
-        </div>
-        {/* Done button */}
-        <button
-          onClick={() => activeProjectId && toggleNodeDone(activeProjectId, data.uid)}
-          className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all"
-          style={{
-            background: isDone ? '#22c55e' : 'transparent',
-            border: `2px solid ${isDone ? '#22c55e' : '#2a4a6a'}`,
-            color: isDone ? 'white' : '#2a4a6a',
-          }}
-        >
-          <Check size={12} />
-        </button>
+      <div className="flex gap-3 items-center mb-4">
+         <div className="w-12 h-12 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0 shadow-inner">
+           <ItemImage itemID={data.id} name={data.item.name} rarity={data.item.rarity} className="w-8 h-8 object-contain" />
+         </div>
+         <div className="flex-1 min-w-0">
+            <h3 className={`font-bold text-sm truncate ${isDone ? 'line-through text-zinc-500' : 'text-zinc-100'}`}>{data.item.name}</h3>
+            <div className="flex items-center gap-1.5 mt-1">
+               <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-zinc-800 text-zinc-300 border border-zinc-700 font-mono">R{data.item.rarity}</span>
+               {data.farmable ? (
+                 <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Farmable</span>
+               ) : (
+                 <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-red-500/10 text-red-400 border border-red-500/20">Seed Loss</span>
+               )}
+            </div>
+         </div>
+         <button onClick={() => activeProjectId && toggleNodeDone(activeProjectId, data.uid)} 
+            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${isDone ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-zinc-700 text-transparent hover:border-emerald-500 hover:text-emerald-500'}`}>
+           <Check size={14} strokeWidth={3} />
+         </button>
       </div>
 
-      {/* Stats row */}
-      <div className="px-3 pb-2 grid grid-cols-3 gap-1.5">
-        <div className="rounded-lg p-1.5 text-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="text-[9px] uppercase tracking-wide mb-0.5" style={{ color: 'var(--text-dim)' }}>Need</div>
-          <div className="text-xs font-bold font-mono text-amber-400">{fmt(data.amountNeeded)}</div>
-        </div>
-        <div className="rounded-lg p-1.5 text-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="text-[9px] uppercase tracking-wide mb-0.5" style={{ color: 'var(--text-dim)' }}>Stock</div>
-          <div className="text-xs font-bold font-mono" style={{ color: data.stock > 0 ? '#22c55e' : 'var(--text-dim)' }}>
-            {fmt(data.stock)}
-          </div>
-        </div>
-        <div className="rounded-lg p-1.5 text-center" style={{ background: deficit > 0 ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.07)', border: `1px solid ${deficit > 0 ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)'}` }}>
-          <div className="text-[9px] uppercase tracking-wide mb-0.5" style={{ color: 'var(--text-dim)' }}>Deficit</div>
-          <div className={`text-xs font-bold font-mono ${deficit > 0 ? 'text-red-400' : 'text-green-400'}`}>{fmt(deficit)}</div>
-        </div>
-      </div>
+      <div className="space-y-3">
+         <div>
+            <div className="flex justify-between text-[10px] text-zinc-400 mb-1 font-semibold tracking-wider">
+               <span>PROGRESS</span>
+               <span className={pct >= 100 ? 'text-emerald-400' : 'text-purple-400'}>{pct.toFixed(0)}%</span>
+            </div>
+            <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+               <div className={`h-full transition-all duration-500 ${pct >= 100 ? 'bg-emerald-500' : 'bg-purple-500 glow-purple'}`} style={{ width: `${pct}%` }} />
+            </div>
+         </div>
 
-      {/* Progress bar */}
-      <div className="px-3 pb-2">
-        <div className="progress-track">
-          <div className="progress-fill" style={{ width: `${pct}%`, background: progressColor }} />
-        </div>
-        <div className="flex justify-between mt-1">
-          <span className="text-[9px]" style={{ color: 'var(--text-dim)' }}>Stock Progress</span>
-          <span className="text-[9px] font-mono font-bold" style={{ color: progressColor }}>{pct.toFixed(0)}%</span>
-        </div>
-      </div>
+         <div className="grid grid-cols-3 gap-2">
+            <div className="bg-zinc-950/50 rounded-lg p-2 text-center border border-zinc-800/50">
+               <div className="text-[9px] text-zinc-500 uppercase tracking-wide font-bold">Need</div>
+               <div className="text-xs font-mono font-bold text-zinc-200">{fmt(data.amountNeeded)}</div>
+            </div>
+            <div className="bg-zinc-950/50 rounded-lg p-2 text-center border border-zinc-800/50">
+               <div className="text-[9px] text-zinc-500 uppercase tracking-wide font-bold">Stock</div>
+               <div className="text-xs font-mono font-bold text-emerald-400">{fmt(data.stock)}</div>
+            </div>
+            <div className="bg-zinc-950/50 rounded-lg p-2 text-center border border-zinc-800/50">
+               <div className="text-[9px] text-zinc-500 uppercase tracking-wide font-bold">Deficit</div>
+               <div className="text-xs font-mono font-bold text-red-400">{fmt(deficit)}</div>
+            </div>
+         </div>
 
-      {/* Hit count + farmable row */}
-      <div className="px-3 pb-2 flex items-center gap-2 flex-wrap">
-        {data.item.breakHits > 0 && (
-          <div className="flex items-center gap-1 badge badge-gray">
-            <Hammer size={8} />
-            <span>{data.item.breakHits} hits</span>
-          </div>
-        )}
-        {data.item.growTime > 0 && (
-          <div className="flex items-center gap-1 badge badge-green">
-            <Leaf size={8} />
-            <span>Farmable</span>
-          </div>
-        )}
-        {data.item.growTime === 0 && !data.isBase && (
-          <div className="flex items-center gap-1 badge badge-red">
-            <AlertCircle size={8} />
-            <span>Seed Loss</span>
-          </div>
-        )}
-        {getMaxDrop(data.id) > 4 && (
-          <div className="flex items-center gap-1 badge badge-blue">
-            <Zap size={8} />
-            <span>Drop ×{getMaxDrop(data.id)}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Stock input */}
-      <div className="px-3 pb-2">
-        <div className="flex items-center gap-2 rounded-lg px-2 py-1.5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <Package size={12} className="text-orange-400 shrink-0" />
-          <input
-            type="number"
-            min={0}
-            placeholder="Stock owned…"
-            value={data.stock || ''}
-            onChange={(e) => activeProjectId && updateStock(activeProjectId, data.id, Number(e.target.value))}
-            className="bg-transparent outline-none w-full text-orange-300 font-bold text-xs placeholder:text-slate-700 placeholder:font-normal"
-            style={{ fontFamily: 'var(--font-mono)' }}
-          />
-        </div>
-      </div>
-
-      {/* Note */}
-      <div className="px-3 pb-3">
-        <button
-          onClick={() => setShowNote(!showNote)}
-          className="flex items-center gap-1 text-[10px] w-full"
-          style={{ color: note ? 'var(--text-secondary)' : 'var(--text-dim)' }}
-        >
-          <Edit2 size={9} />
-          {note ? note.slice(0, 28) + (note.length > 28 ? '…' : '') : 'Add note…'}
-          {showNote ? <ChevronUp size={9} className="ml-auto" /> : <ChevronDown size={9} className="ml-auto" />}
-        </button>
-        {showNote && (
-          <input
-            type="text"
-            className="mt-1 w-full bg-transparent outline-none text-xs placeholder:text-slate-700"
-            style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-secondary)', fontFamily: 'var(--font-nunito)', paddingBottom: 2 }}
-            placeholder="Type note…"
-            value={localNote}
-            onChange={(e) => setLocalNote(e.target.value)}
-            onBlur={() => activeProjectId && setNodeNote(activeProjectId, data.uid, localNote)}
-            autoFocus
-          />
-        )}
+         <div className="flex items-center gap-2 bg-zinc-950 rounded-lg px-3 py-2 border border-zinc-800 focus-within:border-purple-500/50 transition-colors">
+            <Package size={14} className="text-purple-400 shrink-0" />
+            <input type="number" min={0} value={data.stock || ''} onChange={(e) => activeProjectId && updateStock(activeProjectId, data.id, Number(e.target.value))} 
+              placeholder="Update stock..." className="bg-transparent w-full outline-none text-xs text-zinc-200 font-mono" />
+         </div>
       </div>
 
       {data.isTruncated && (
-        <div className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-[9px] font-black px-2.5 py-1 rounded-full border whitespace-nowrap"
-          style={{ background: '#2d1515', color: '#f87171', borderColor: '#7f1d1d' }}>
-          DEPTH LIMIT
+        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[9px] font-black px-3 py-1 rounded-full bg-red-950 border border-red-900 text-red-400 whitespace-nowrap shadow-lg">
+          MAX DEPTH LIMIT
         </div>
       )}
 
-      <Handle type="source" position={Position.Bottom}
-        style={{ background: borderColor, width: 56, height: 4, borderRadius: 2, bottom: -2, border: 'none' }} />
+      <Handle type="source" position={Position.Bottom} className="!bg-zinc-500 !border-none !w-8 !h-1.5 !rounded-full !-bottom-1" />
     </div>
   );
 });
 CustomNode.displayName = 'CustomNode';
-
 const nodeTypes = { gm_node: CustomNode };
 
 // ──────────────────────────────────────────────────────────────────────────────
-// STOCK TAB
+// TAB: STOCK
 // ──────────────────────────────────────────────────────────────────────────────
-function StockTab({
-  project, itemsData, recipesData,
-}: { project: ProjectState; itemsData: any; recipesData: any }) {
+function StockTab({ project, itemsData, recipesData }: any) {
   const { updateStock } = useStore();
-  const requirements = useMemo(
-    () => getBaseRequirements(project.targetId, project.targetAmount, project.maxDepth, recipesData, project.seedReturnRate),
-    [project.targetId, project.targetAmount, project.maxDepth, project.seedReturnRate, recipesData]
-  );
+  const requirements = useMemo(() => getBaseRequirements(project.targetId, project.targetAmount, project.maxDepth, recipesData, project.seedReturnRate), [project, recipesData]);
 
-  const sorted = useMemo(
-    () =>
-      Object.entries(requirements)
-        .map(([id, total]) => {
-          const itemId = Number(id);
-          const item = itemsData[itemId] ?? { name: `#${itemId}`, rarity: 0, growTime: 0, breakHits: 4 };
-          const stock = project.currentStock[itemId] ?? 0;
-          const deficit = Math.max(0, total - stock);
-          return { itemId, item, total, stock, deficit };
-        })
-        .sort((a, b) => b.deficit - a.deficit),
-    [requirements, project.currentStock, itemsData]
-  );
-
-  const totalNeeded = sorted.reduce((s, r) => s + r.total, 0);
-  const totalStock  = sorted.reduce((s, r) => s + r.stock, 0);
-  const totalDef    = sorted.reduce((s, r) => s + r.deficit, 0);
+  const sorted = useMemo(() => Object.entries(requirements).map(([id, total]) => {
+      const itemId = Number(id);
+      const item = itemsData[itemId] ?? { name: `#${itemId}`, rarity: 0, growTime: 0, breakHits: 4 };
+      const stock = project.currentStock[itemId] ?? 0;
+      const deficit = Math.max(0, (total as number) - stock);
+      return { itemId, item, total: total as number, stock, deficit };
+    }).sort((a, b) => b.deficit - a.deficit), [requirements, project.currentStock, itemsData]);
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Summary */}
-      <div className="p-4 grid grid-cols-3 gap-3 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
-        <div className="stat-chip">
-          <span className="val text-amber-400">{fmt(totalNeeded)}</span>
-          <span className="lbl">Total Needed</span>
+    <div className="p-4 md:p-6 max-w-5xl mx-auto flex flex-col gap-4 pb-24">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-col items-center justify-center">
+          <span className="text-2xl font-black text-purple-400 font-mono">{fmt(sorted.reduce((s, r) => s + r.total, 0))}</span>
+          <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold mt-1">Total Needed</span>
         </div>
-        <div className="stat-chip">
-          <span className="val text-green-400">{fmt(totalStock)}</span>
-          <span className="lbl">In Stock</span>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-col items-center justify-center">
+          <span className="text-2xl font-black text-emerald-400 font-mono">{fmt(sorted.reduce((s, r) => s + r.stock, 0))}</span>
+          <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold mt-1">Total Stock</span>
         </div>
-        <div className="stat-chip">
-          <span className="val" style={{ color: totalDef > 0 ? '#f87171' : '#4ade80', fontSize: 18 }}>{fmt(totalDef)}</span>
-          <span className="lbl">Deficit</span>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-col items-center justify-center glow-purple">
+          <span className="text-2xl font-black text-red-400 font-mono">{fmt(sorted.reduce((s, r) => s + r.deficit, 0))}</span>
+          <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold mt-1">Total Deficit</span>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="flex-1 overflow-y-auto">
-        {/* Header */}
-        <div className="grid gap-2 px-4 py-2 sticky top-0 text-[10px] font-black uppercase tracking-wider border-b"
-          style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', color: 'var(--text-dim)',
-            gridTemplateColumns: '36px 1fr 70px 70px 80px 60px 60px' }}>
-          <span />
-          <span>Item</span>
-          <span className="text-right">Needed</span>
-          <span className="text-right">Stock</span>
-          <span className="text-center">Edit Stock</span>
-          <span className="text-center">Hits</span>
-          <span className="text-center">Farm</span>
-        </div>
-
+      <div className="flex flex-col gap-3">
         {sorted.map(({ itemId, item, total, stock, deficit }) => {
           const pct = total > 0 ? Math.min(100, (stock / total) * 100) : 100;
           return (
-            <div
-              key={itemId}
-              className="grid gap-2 px-4 py-2 border-b items-center hover:bg-white/[0.02] transition-colors fade-in"
-              style={{ borderColor: 'var(--border)', gridTemplateColumns: '36px 1fr 70px 70px 80px 60px 60px' }}
-            >
-              {/* Image */}
-              <ItemImage itemID={itemId} name={item.name} rarity={item.rarity} size={30} className="rounded-md" />
-
-              {/* Name + progress */}
-              <div className="min-w-0">
-                <div className="text-sm font-bold truncate text-white/90">{item.name}</div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <div className="progress-track flex-1">
-                    <div className="progress-fill" style={{ width: `${pct}%`, background: pct >= 100 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444' }} />
-                  </div>
-                  <span className="text-[9px] font-mono shrink-0" style={{ color: 'var(--text-dim)' }}>{pct.toFixed(0)}%</span>
-                </div>
+            <div key={itemId} className="flex flex-col md:flex-row md:items-center gap-4 bg-zinc-900/60 p-4 rounded-xl border border-zinc-800 hover:border-zinc-700 transition-colors">
+              <div className="flex items-center gap-4 w-full md:w-auto md:flex-1">
+                 <div className="w-10 h-10 shrink-0 bg-zinc-950 rounded-lg border border-zinc-800 flex items-center justify-center">
+                   <ItemImage itemID={itemId} name={item.name} rarity={item.rarity} className="w-7 h-7 object-contain" />
+                 </div>
+                 <div className="flex-1 min-w-0">
+                   <div className="text-sm font-bold text-zinc-100 truncate">{item.name}</div>
+                   <div className="flex items-center gap-2 mt-1.5">
+                     <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden flex-1">
+                       <div className={`h-full rounded-full ${pct >= 100 ? 'bg-emerald-500' : 'bg-purple-500'}`} style={{ width: `${pct}%`}} />
+                     </div>
+                     <span className="text-[9px] font-mono text-zinc-400">{pct.toFixed(0)}%</span>
+                   </div>
+                 </div>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-2 w-full md:w-auto">
+                 <div className="text-center md:text-right bg-zinc-950/50 md:bg-transparent rounded-lg p-2 md:p-0 border md:border-none border-zinc-800">
+                   <div className="text-[9px] text-zinc-500 uppercase font-bold">Need</div>
+                   <div className="text-xs font-mono font-bold text-zinc-300">{fmt(total)}</div>
+                 </div>
+                 <div className="text-center md:text-right bg-zinc-950/50 md:bg-transparent rounded-lg p-2 md:p-0 border md:border-none border-zinc-800">
+                   <div className="text-[9px] text-zinc-500 uppercase font-bold">Stock</div>
+                   <div className="text-xs font-mono font-bold text-emerald-400">{fmt(stock)}</div>
+                 </div>
+                 <div className="text-center md:text-right bg-zinc-950/50 md:bg-transparent rounded-lg p-2 md:p-0 border md:border-none border-zinc-800">
+                   <div className="text-[9px] text-zinc-500 uppercase font-bold">Deficit</div>
+                   <div className="text-xs font-mono font-bold text-red-400">{fmt(deficit)}</div>
+                 </div>
               </div>
 
-              {/* Needed */}
-              <div className="text-right font-mono text-xs text-amber-300">{fmt(total)}</div>
-
-              {/* Stock */}
-              <div className="text-right font-mono text-xs" style={{ color: deficit > 0 ? '#f87171' : '#4ade80' }}>
-                {fmt(stock)}
-                {deficit > 0 && <div className="text-[9px]" style={{ color: '#f87171' }}>−{fmt(deficit)}</div>}
-              </div>
-
-              {/* Edit stock */}
-              <div>
-                <input
-                  type="number"
-                  min={0}
-                  value={stock || ''}
-                  placeholder="0"
-                  onChange={(e) => updateStock(project.id, itemId, Number(e.target.value))}
-                  className="gm-input text-center text-xs py-1 px-2"
-                  style={{ fontFamily: 'var(--font-mono)' }}
-                />
-              </div>
-
-              {/* Hit count */}
-              <div className="text-center">
-                {item.breakHits > 0 ? (
-                  <span className="badge badge-gray">
-                    <Hammer size={8} /> {item.breakHits}
-                  </span>
-                ) : <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>—</span>}
-              </div>
-
-              {/* Farmable */}
-              <div className="text-center">
-                {item.growTime > 0
-                  ? <span className="badge badge-green"><Leaf size={8} /> {Math.round(item.growTime / 60)}m</span>
-                  : <span className="badge badge-red">No</span>
-                }
+              <div className="w-full md:w-36 mt-2 md:mt-0 shrink-0">
+                 <div className="flex items-center gap-2 bg-zinc-950 rounded-lg px-3 py-2 border border-zinc-700 focus-within:border-purple-500 transition-colors">
+                    <Package size={14} className="text-zinc-500" />
+                    <input type="number" min={0} value={stock || ''} onChange={(e) => updateStock(project.id, itemId, Number(e.target.value))} 
+                      className="bg-transparent w-full outline-none text-xs text-zinc-200 font-mono" placeholder="0" />
+                 </div>
               </div>
             </div>
           );
@@ -501,23 +303,17 @@ function StockTab({
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// HARVEST TAB
+// TAB: HARVEST
 // ──────────────────────────────────────────────────────────────────────────────
-function HarvestTab({
-  project, itemsData,
-}: { project: ProjectState; itemsData: any }) {
+function HarvestTab({ project, itemsData }: any) {
   const { updateHarvestSettings } = useStore();
   const hs = project.harvestSettings;
-
   const [searchQ, setSearchQ] = useState('');
   const [showDrop, setShowDrop] = useState(false);
 
   const searchResults = useMemo(() => {
     if (!searchQ) return [];
-    const q = searchQ.toLowerCase();
-    return Object.values(itemsData as Record<number, any>)
-      .filter((it: any) => it.name.toLowerCase().includes(q))
-      .slice(0, 8);
+    return Object.values(itemsData as Record<number, any>).filter((it: any) => it.name.toLowerCase().includes(searchQ.toLowerCase())).slice(0, 8);
   }, [searchQ, itemsData]);
 
   const targetItem = hs.harvestTargetId ? itemsData[hs.harvestTargetId] : null;
@@ -530,119 +326,85 @@ function HarvestTab({
     const withExtras = base + extras;
     const final = hs.goldenBooster ? withExtras * 2 : withExtras;
     const total = Math.floor(final * hs.numTrees);
-    const perHour = Math.floor((3600 / Math.max(1, targetItem?.growTime ?? 3600)) * final);
-    const perDay  = Math.floor((86400 / Math.max(1, targetItem?.growTime ?? 3600)) * final);
-    return { perTree: final.toFixed(2), total, perHour, perDay, seedsBack: hs.numTrees };
+    
+    const gemsPerTree = Math.floor(((targetItem?.rarity || 1) / 4) * final);
+    const totalGems = gemsPerTree * hs.numTrees;
+
+    return { perTree: final.toFixed(1), total, totalGems, seedsBack: hs.numTrees };
   }, [hs, maxDrop, targetItem]);
 
-  const Toggle = ({ label, field, value }: { label: string; field: keyof typeof hs; value: boolean }) => (
-    <label className="flex items-center justify-between gap-3 py-2 cursor-pointer select-none">
-      <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>{label}</span>
-      <label className="toggle-switch">
-        <input type="checkbox" checked={value} onChange={(e) => updateHarvestSettings(project.id, { [field]: e.target.checked })} />
-        <span className="toggle-slider" />
-      </label>
-    </label>
-  );
-
   return (
-    <div className="p-4 flex flex-col gap-4 overflow-y-auto h-full">
-      <div className="rounded-xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-        <div className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: 'var(--text-dim)' }}>
-          🌿 Select Item to Harvest
-        </div>
-
-        {/* Target item search */}
+    <div className="p-4 md:p-6 max-w-3xl mx-auto flex flex-col gap-6 pb-24">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-lg">
+        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-2">
+          <Leaf size={14} className="text-emerald-500" /> Select Target
+        </h3>
         <div className="relative" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as any)) setShowDrop(false); }}>
-          <input
-            className="gm-input"
-            placeholder="Search item…"
-            value={searchQ || targetItem?.name || ''}
-            onChange={(e) => { setSearchQ(e.target.value); setShowDrop(true); }}
-            onFocus={() => setShowDrop(true)}
-          />
+          <input className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-200 outline-none focus:border-purple-500 transition-colors"
+            placeholder="Search farmable item..." value={searchQ || targetItem?.name || ''} onChange={(e) => { setSearchQ(e.target.value); setShowDrop(true); }} onFocus={() => setShowDrop(true)} />
           {showDrop && searchResults.length > 0 && (
-            <div className="absolute top-full mt-1 left-0 right-0 rounded-xl overflow-hidden z-50"
-              style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', boxShadow: '0 12px 40px rgba(0,0,0,0.7)' }}>
+            <div className="absolute top-full mt-2 left-0 right-0 bg-zinc-900 border border-zinc-700 rounded-xl overflow-hidden z-50 shadow-2xl">
               {searchResults.map((it: any) => (
-                <div key={it.itemID}
-                  className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors"
-                  onMouseDown={() => {
-                    updateHarvestSettings(project.id, { harvestTargetId: it.itemID });
-                    setSearchQ('');
-                    setShowDrop(false);
-                  }}>
-                  <ItemImage itemID={it.itemID} name={it.name} rarity={it.rarity} size={28} className="rounded" />
+                <div key={it.itemID} className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-zinc-800 transition-colors"
+                  onMouseDown={() => { updateHarvestSettings(project.id, { harvestTargetId: it.itemID }); setSearchQ(''); setShowDrop(false); }}>
+                  <ItemImage itemID={it.itemID} name={it.name} rarity={it.rarity} className="w-7 h-7 object-contain rounded" />
                   <div>
-                    <div className="text-sm font-bold">{it.name}</div>
-                    <div className="text-[10px] font-mono" style={{ color: 'var(--text-dim)' }}>
-                      #{it.itemID} · Max Drop: {getMaxDrop(it.itemID)} · {it.growTime > 0 ? `${Math.round(it.growTime / 60)}m grow` : 'Not farmable'}
-                    </div>
+                    <div className="text-sm font-bold text-zinc-200">{it.name}</div>
+                    <div className="text-[10px] font-mono text-zinc-500">Max Drop: {getMaxDrop(it.itemID)} · {it.growTime > 0 ? 'Farmable' : 'Not farmable'}</div>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
-
-        {/* Selected item info */}
-        {targetItem && (
-          <div className="mt-3 flex items-center gap-3 p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <ItemImage itemID={hs.harvestTargetId!} name={targetItem.name} rarity={targetItem.rarity} size={40} className="rounded-lg" />
-            <div>
-              <div className="font-bold text-sm">{targetItem.name}</div>
-              <div className="flex gap-2 mt-1 flex-wrap">
-                <span className="badge badge-blue">Max Drop: {maxDrop}</span>
-                {targetItem.growTime > 0
-                  ? <span className="badge badge-green">🕐 {Math.round(targetItem.growTime / 60)}m</span>
-                  : <span className="badge badge-red">Not Farmable</span>}
-                <span className="badge badge-amber">R{targetItem.rarity}</span>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Config */}
-      <div className="rounded-xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-        <div className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: 'var(--text-dim)' }}>⚙ Config</div>
-        <div className="mb-3">
-          <label className="block text-xs font-bold mb-1" style={{ color: 'var(--text-secondary)' }}>Number of Trees</label>
-          <input type="number" min={1} className="gm-input" value={hs.numTrees}
-            onChange={(e) => updateHarvestSettings(project.id, { numTrees: Number(e.target.value) })} />
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-lg">
+        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-2">
+          <Settings2 size={14} className="text-purple-500" /> Modifiers Config
+        </h3>
+        <div className="mb-5">
+          <label className="block text-xs font-bold text-zinc-300 mb-2">Number of Trees to Harvest</label>
+          <input type="number" min={1} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-purple-400 font-mono font-bold outline-none focus:border-purple-500"
+            value={hs.numTrees} onChange={(e) => updateHarvestSettings(project.id, { numTrees: Number(e.target.value) })} />
         </div>
-        <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
-          <Toggle label="🧲 Magplant Remote (max drops always)" field="magplant" value={hs.magplant} />
-          <Toggle label="✨ Golden Booster (×2 items)" field="goldenBooster" value={hs.goldenBooster} />
-          <Toggle label="🌾 Farmer Role (+1 per harvest)" field="farmerRole" value={hs.farmerRole} />
-          <Toggle label="💍 Ring of Flowers (+1 per harvest)" field="ringOfFlowers" value={hs.ringOfFlowers} />
+        <div className="space-y-1">
+          {[
+            { label: '🧲 Magplant Remote (Guaranteed Max Drops)', field: 'magplant' },
+            { label: '✨ Golden Booster (Drops ×2)', field: 'goldenBooster' },
+            { label: '🌾 Farmer Role (Level +1 Extra Fruit)', field: 'farmerRole' },
+            { label: '💍 Ring of Flowers (+1 Extra Fruit)', field: 'ringOfFlowers' }
+          ].map((item) => (
+            <label key={item.field} className="flex items-center justify-between p-3 rounded-lg hover:bg-zinc-800/50 cursor-pointer border border-transparent hover:border-zinc-800 transition-colors">
+              <span className="text-sm font-semibold text-zinc-300">{item.label}</span>
+              <input type="checkbox" checked={hs[item.field as keyof typeof hs] as boolean} onChange={(e) => updateHarvestSettings(project.id, { [item.field]: e.target.checked })} 
+                className="w-5 h-5 accent-purple-500 rounded bg-zinc-900 border-zinc-700" />
+            </label>
+          ))}
         </div>
       </div>
 
-      {/* Results */}
       {calcResult && (
-        <div className="rounded-xl p-4 fade-in" style={{ background: 'rgba(34,197,94,0.05)', border: '1px solid rgba(34,197,94,0.2)' }}>
-          <div className="text-xs font-black uppercase tracking-widest mb-3 text-green-400">📊 Results</div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="stat-chip">
-              <span className="val text-amber-300">{calcResult.perTree}</span>
-              <span className="lbl">Items / Harvest</span>
+        <div className="bg-emerald-950/20 border border-emerald-900/50 rounded-2xl p-5 shadow-lg glow-emerald">
+          <h3 className="text-xs font-black uppercase tracking-widest text-emerald-500 mb-4 flex items-center gap-2">
+            <BarChart3 size={14} /> Harvest Estimations
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-zinc-950/50 rounded-xl p-3 border border-zinc-800/50 text-center">
+              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wide mb-1">Avg Fruit/Tree</div>
+              <div className="text-lg font-black text-zinc-200 font-mono">{calcResult.perTree}</div>
             </div>
-            <div className="stat-chip">
-              <span className="val text-green-400">{fmt(calcResult.total)}</span>
-              <span className="lbl">Total ({fmt(hs.numTrees)} trees)</span>
+            <div className="bg-zinc-950/50 rounded-xl p-3 border border-zinc-800/50 text-center">
+              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wide mb-1">Total Fruits</div>
+              <div className="text-lg font-black text-emerald-400 font-mono">{fmt(calcResult.total)}</div>
             </div>
-            <div className="stat-chip">
-              <span className="val text-blue-300" style={{ fontSize: 16 }}>{fmt(calcResult.perHour)}</span>
-              <span className="lbl">Items / Hour</span>
+            <div className="bg-zinc-950/50 rounded-xl p-3 border border-zinc-800/50 text-center">
+              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wide mb-1">Seeds Return</div>
+              <div className="text-lg font-black text-blue-400 font-mono">{fmt(calcResult.seedsBack)}</div>
             </div>
-            <div className="stat-chip">
-              <span className="val text-purple-300" style={{ fontSize: 16 }}>{fmt(calcResult.perDay)}</span>
-              <span className="lbl">Items / Day</span>
-            </div>
-            <div className="stat-chip col-span-2">
-              <span className="val text-green-300" style={{ fontSize: 16 }}>{fmt(calcResult.seedsBack)}</span>
-              <span className="lbl">Seeds Returned (1 per break)</span>
+            <div className="bg-zinc-950/50 rounded-xl p-3 border border-zinc-800/50 text-center">
+              <div className="text-[10px] text-purple-500 font-bold uppercase tracking-wide mb-1 flex items-center justify-center gap-1"><Gem size={10}/> Est. Gems</div>
+              <div className="text-lg font-black text-purple-400 font-mono">{fmt(calcResult.totalGems)}</div>
             </div>
           </div>
         </div>
@@ -652,248 +414,186 @@ function HarvestTab({
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// STATS TAB
+// TAB: STATS
 // ──────────────────────────────────────────────────────────────────────────────
-function StatsTab({
-  project, itemsData, recipesData,
-}: { project: ProjectState; itemsData: any; recipesData: any }) {
-  const requirements = useMemo(
-    () => getBaseRequirements(project.targetId, project.targetAmount, project.maxDepth, recipesData, project.seedReturnRate),
-    [project.targetId, project.targetAmount, project.maxDepth, project.seedReturnRate, recipesData]
-  );
-  const totalSplices = useMemo(
-    () => countSplices(project.targetId, project.targetAmount, project.maxDepth, recipesData, project.seedReturnRate),
-    [project.targetId, project.targetAmount, project.maxDepth, project.seedReturnRate, recipesData]
-  );
+function StatsTab({ project, itemsData, recipesData }: any) {
+  const requirements = useMemo(() => getBaseRequirements(project.targetId, project.targetAmount, project.maxDepth, recipesData, project.seedReturnRate), [project, recipesData]);
+  const totalSplices = useMemo(() => countSplices(project.targetId, project.targetAmount, project.maxDepth, recipesData, project.seedReturnRate), [project, recipesData]);
 
   const baseEntries = Object.entries(requirements).map(([id, total]) => {
     const itemId = Number(id);
     const item = itemsData[itemId] ?? { name: `#${itemId}`, growTime: 0, breakHits: 4 };
     const stock = project.currentStock[itemId] ?? 0;
-    return { itemId, item, total, stock };
+    return { itemId, item, total: total as number, stock };
   });
 
   const totalBaseSeeds   = baseEntries.reduce((s, r) => s + r.total, 0);
   const totalHits        = baseEntries.reduce((s, r) => s + r.total * (r.item.breakHits || 4), 0);
-  const farmableTypes    = baseEntries.filter((r) => r.item.growTime > 0).length;
-  const nonFarmableTypes = baseEntries.filter((r) => r.item.growTime === 0).length;
   const totalStocked     = baseEntries.reduce((s, r) => s + r.stock, 0);
   const deficit          = Math.max(0, totalBaseSeeds - totalStocked);
 
+  const isGain = project.seedReturnRate > 1;
+  const isLoss = project.seedReturnRate < 1;
+  const seedVariance = Math.floor(totalSplices * Math.abs(project.seedReturnRate - 1));
+
   return (
-    <div className="p-4 flex flex-col gap-4 overflow-y-auto h-full">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="stat-chip col-span-2">
-          <span className="val text-amber-400" style={{ fontSize: 28 }}>{fmt(totalSplices)}</span>
-          <span className="lbl">Total Splices Required</span>
+    <div className="p-4 md:p-6 max-w-4xl mx-auto flex flex-col gap-6 pb-24">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="col-span-2 bg-purple-950/20 border border-purple-900/50 rounded-2xl p-5 flex flex-col items-center justify-center glow-purple">
+          <span className="text-3xl font-black text-purple-400 font-mono">{fmt(totalSplices)}</span>
+          <span className="text-xs text-purple-300/70 uppercase tracking-widest font-bold mt-1">Total Splices Required</span>
         </div>
-        <div className="stat-chip">
-          <span className="val text-blue-300">{fmt(totalBaseSeeds)}</span>
-          <span className="lbl">Total Base Seeds</span>
+        <div className="col-span-2 bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex flex-col items-center justify-center">
+          <span className="text-3xl font-black text-red-400 font-mono">{fmt(totalHits)}</span>
+          <span className="text-xs text-zinc-500 uppercase tracking-widest font-bold mt-1 flex items-center gap-1"><Hammer size={12}/> Est. Breaking Hits</span>
         </div>
-        <div className="stat-chip">
-          <span className="val" style={{ color: deficit > 0 ? '#f87171' : '#4ade80', fontSize: 18 }}>{fmt(deficit)}</span>
-          <span className="lbl">Total Deficit</span>
-        </div>
-        <div className="stat-chip">
-          <span className="val text-red-300">{fmt(totalHits)}</span>
-          <span className="lbl">Est. Total Hits</span>
-        </div>
-        <div className="stat-chip">
-          <span className="val" style={{ color: 'var(--text-secondary)', fontSize: 18 }}>{baseEntries.length}</span>
-          <span className="lbl">Unique Base Types</span>
-        </div>
-        <div className="stat-chip">
-          <span className="val text-green-400" style={{ fontSize: 18 }}>{farmableTypes}</span>
-          <span className="lbl">Farmable Types</span>
-        </div>
-        <div className="stat-chip">
-          <span className="val text-red-400" style={{ fontSize: 18 }}>{nonFarmableTypes}</span>
-          <span className="lbl">Non-Farmable Types</span>
-        </div>
+        
+        {(isGain || isLoss) && (
+          <div className={`col-span-2 md:col-span-4 rounded-2xl p-5 flex items-center justify-between border ${isGain ? 'bg-emerald-950/20 border-emerald-900/50 glow-emerald' : 'bg-red-950/20 border-red-900/50'}`}>
+             <div>
+               <h4 className={`text-xs font-black uppercase tracking-widest mb-1 ${isGain ? 'text-emerald-500' : 'text-red-500'}`}>
+                 {isGain ? '📈 Estimated Seed Gain' : '📉 Estimated Seed Loss'}
+               </h4>
+               <p className="text-sm text-zinc-400 font-medium">Based on {project.seedReturnRate}x return rate across splices.</p>
+             </div>
+             <div className={`text-3xl font-black font-mono ${isGain ? 'text-emerald-400' : 'text-red-400'}`}>
+               {isGain ? '+' : '-'}{fmt(seedVariance)}
+             </div>
+          </div>
+        )}
       </div>
 
-      {/* Per-item breakdown */}
-      <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-        <div className="px-4 py-2 text-xs font-black uppercase tracking-widest" style={{ background: 'var(--bg-card)', color: 'var(--text-dim)' }}>
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+        <div className="bg-zinc-950 px-5 py-3 border-b border-zinc-800 text-xs font-black uppercase tracking-widest text-zinc-500">
           Base Seed Breakdown
         </div>
-        {baseEntries.sort((a, b) => b.total - a.total).map(({ itemId, item, total }) => (
-          <div key={itemId} className="flex items-center gap-3 px-4 py-2 border-t" style={{ borderColor: 'var(--border)' }}>
-            <ItemImage itemID={itemId} name={item.name} rarity={item.rarity} size={28} className="rounded shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold truncate">{item.name}</div>
-              <div className="flex gap-2 mt-0.5">
-                {item.breakHits > 0 && <span className="badge badge-gray"><Hammer size={7} /> {item.breakHits} hits</span>}
-                {item.growTime > 0
-                  ? <span className="badge badge-green"><Leaf size={7} /> {Math.round(item.growTime / 60)}m</span>
-                  : <span className="badge badge-red">No farm</span>}
+        <div className="divide-y divide-zinc-800/50">
+          {baseEntries.sort((a, b) => b.total - a.total).map(({ itemId, item, total }) => (
+            <div key={itemId} className="flex items-center gap-4 px-5 py-3 hover:bg-zinc-800/30 transition-colors">
+              <ItemImage itemID={itemId} name={item.name} rarity={item.rarity} className="w-8 h-8 rounded-lg shrink-0 border border-zinc-700 object-contain" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-bold text-zinc-200 truncate">{item.name}</div>
+                <div className="flex gap-2 mt-1">
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono"><Hammer size={8} className="inline mr-1 -mt-0.5"/> {item.breakHits || 4}</span>
+                  {item.growTime > 0 ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950/50 text-emerald-400">Farmable</span> : <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-950/50 text-red-400">Seed Loss</span>}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="font-mono text-sm font-bold text-purple-400">{fmt(total)}</div>
+                <div className="font-mono text-[9px] text-zinc-500 mt-0.5">Total: {fmt(total * (item.breakHits || 4))} hits</div>
               </div>
             </div>
-            <div className="text-right">
-              <div className="font-mono text-sm text-amber-300 font-bold">{fmt(total)}</div>
-              <div className="font-mono text-[10px]" style={{ color: 'var(--text-dim)' }}>×{item.breakHits || 4} = {fmt(total * (item.breakHits || 4))} hits</div>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// MAIN COMPONENT
+// MAIN COMPONENT EXPORT
 // ──────────────────────────────────────────────────────────────────────────────
-export default function MassingTree({
-  project, itemsData, recipesData, chiData,
-}: {
-  project: ProjectState;
-  itemsData: Record<number, any>;
-  recipesData: Record<number, [number, number]>;
-  chiData: Record<number, string>;
-}) {
-  const { setMaxDepth, setTargetAmount, setSeedReturnRate } = useStore();
+export default function MassingTree({ project, itemsData, recipesData, chiData }: any) {
+  const { setMaxDepth, setTargetAmount, setSeedReturnRate, projects } = useStore();
   const [activeTab, setActiveTab] = useState<'tree' | 'stock' | 'harvest' | 'stats'>('tree');
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [controlsOpen, setControlsOpen] = useState(true);
+  const [controlsOpen, setControlsOpen] = useState(false);
 
-  const { nodes: calcNodes, edges: calcEdges } = useMemo(
-    () => generateTree(project, recipesData, itemsData, chiData),
-    [project.targetId, project.targetAmount, project.maxDepth, project.currentStock, project.seedReturnRate, recipesData, itemsData, chiData]
-  );
+  const { nodes: calcNodes, edges: calcEdges } = useMemo(() => generateTree(project, recipesData, itemsData, chiData), [project, recipesData, itemsData, chiData]);
 
   useEffect(() => {
     setNodes((nds) => {
       if (!nds.length || nds[0]?.id !== calcNodes[0]?.id) return calcNodes;
-      return calcNodes.map((n) => {
-        const old = nds.find((o) => o.id === n.id);
-        return old ? { ...n, position: old.position } : n;
-      });
+      return calcNodes.map((n) => { const old = nds.find((o) => o.id === n.id); return old ? { ...n, position: old.position } : n; });
     });
     setEdges(calcEdges);
   }, [calcNodes, calcEdges, setNodes, setEdges]);
 
-  const targetName = itemsData[project.targetId]?.name ?? `#${project.targetId}`;
+  const [saveToast, setSaveToast] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      localStorage.setItem('growmass_autosave_backup', JSON.stringify(projects));
+      setSaveToast(true);
+      setTimeout(() => setSaveToast(false), 2000); 
+    }, 1500); 
+    return () => clearTimeout(timer);
+  }, [projects]);
 
+  const targetName = itemsData[project.targetId]?.name ?? `#${project.targetId}`;
   const tabs = [
-    { id: 'tree' as const,    icon: <TreePine size={16} />,  label: 'Tree' },
-    { id: 'stock' as const,   icon: <Package size={16} />,   label: 'Stock' },
-    { id: 'harvest' as const, icon: <Wheat size={16} />,     label: 'Harvest' },
-    { id: 'stats' as const,   icon: <BarChart3 size={16} />, label: 'Stats' },
+    { id: 'tree' as const,    icon: <TreePine size={18} />,  label: 'Tree' },
+    { id: 'stock' as const,   icon: <Package size={18} />,   label: 'Stock' },
+    { id: 'harvest' as const, icon: <Wheat size={18} />,     label: 'Harvest' },
+    { id: 'stats' as const,   icon: <BarChart3 size={18} />, label: 'Stats' },
   ];
 
   return (
-    <div className="relative flex flex-col w-full h-full" style={{ background: 'var(--bg-base)' }}>
-      {/* ── TOP BAR ── */}
-      <div className="flex items-center gap-3 px-4 py-2 shrink-0 z-20 border-b"
-        style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
-        {/* Title */}
-        <div className="min-w-0 mr-2 hidden md:block">
-          <div className="font-black text-sm truncate" style={{ maxWidth: 180 }}>{project.name}</div>
-          <div className="text-[10px] truncate" style={{ color: 'var(--text-dim)', maxWidth: 180 }}>{targetName}</div>
+    <div className="relative flex flex-col w-full h-full bg-black text-zinc-200 font-sans overflow-hidden">
+      <style>{INJECTED_CSS}</style>
+      
+      <div className={`absolute top-20 left-1/2 -translate-x-1/2 z-50 bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg transition-all duration-300 flex items-center gap-2 ${saveToast ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'}`}>
+        <Save size={14} /> Auto-Saved
+      </div>
+
+      <div className="glass-panel flex items-center justify-between px-4 md:px-6 py-3 z-20 shrink-0">
+        <div className="min-w-0 mr-4">
+          <div className="font-black text-base truncate text-white">{project.name}</div>
+          <div className="text-xs truncate text-purple-400 font-medium">Target: {targetName}</div>
         </div>
 
-        {/* Desktop tabs */}
-        <div className="hidden md:flex items-center gap-1 bg-black/20 rounded-lg p-1 border" style={{ borderColor: 'var(--border)' }}>
+        <div className="hidden md:flex items-center gap-2 bg-zinc-900/80 p-1.5 rounded-xl border border-zinc-800">
           {tabs.map((t) => (
-            <button key={t.id} className={`tab-pill flex items-center gap-1.5 ${activeTab === t.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(t.id)}>
+            <button key={t.id} onClick={() => setActiveTab(t.id)} 
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeTab === t.id ? 'bg-purple-500 text-white shadow-md' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'}`}>
               {t.icon} {t.label}
             </button>
           ))}
         </div>
 
-        <div className="flex-1" />
-
-        {/* Controls toggle */}
-        <button
-          onClick={() => setControlsOpen(!controlsOpen)}
-          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold border transition-colors"
-          style={{
-            background: controlsOpen ? 'rgba(56,189,248,0.08)' : 'transparent',
-            borderColor: controlsOpen ? 'rgba(56,189,248,0.3)' : 'var(--border)',
-            color: controlsOpen ? 'var(--accent-blue)' : 'var(--text-secondary)',
-          }}>
-          <Settings2 size={13} /> Settings
+        <button onClick={() => setControlsOpen(!controlsOpen)} className={`flex items-center justify-center w-10 h-10 md:w-auto md:px-4 rounded-xl border transition-all ${controlsOpen ? 'bg-purple-500/20 border-purple-500/50 text-purple-400 glow-purple' : 'bg-zinc-900 border-zinc-700 text-zinc-400 hover:text-white'}`}>
+          <Settings2 size={18} className="md:mr-2" />
+          <span className="hidden md:inline text-sm font-bold">Settings</span>
         </button>
       </div>
 
-      {/* ── CONTROLS PANEL ── */}
-      {controlsOpen && (
-        <div className="shrink-0 px-4 py-3 border-b grid grid-cols-2 md:grid-cols-4 gap-3 fade-in"
-          style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--text-dim)' }}>
-              Target Amount
-            </label>
-            <input type="number" min={1} className="gm-input text-amber-300" value={project.targetAmount || ''}
-              onChange={(e) => setTargetAmount(project.id, Number(e.target.value))}
-              style={{ fontFamily: 'var(--font-mono)' }} />
+      <div className={`shrink-0 bg-zinc-950 border-b border-zinc-800 overflow-hidden transition-all duration-300 ease-in-out ${controlsOpen ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0 border-transparent'}`}>
+        <div className="p-4 md:p-6 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-6xl mx-auto">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Target Amount</label>
+            <input type="number" min={1} value={project.targetAmount || ''} onChange={(e) => setTargetAmount(project.id, Number(e.target.value))} 
+              className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-purple-400 outline-none text-sm font-mono font-bold focus:border-purple-500" />
           </div>
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--text-dim)' }}>
-              Seed Return Rate
-            </label>
-            <input type="number" step={0.05} min={0.05} max={2} className="gm-input text-orange-300" value={project.seedReturnRate}
-              onChange={(e) => setSeedReturnRate(project.id, Number(e.target.value))}
-              style={{ fontFamily: 'var(--font-mono)' }} />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500" title="Farmable > 1, Unfarmable < 1">Seed Ratio</label>
+            <input type="number" step={0.05} min={0.1} value={project.seedReturnRate} onChange={(e) => setSeedReturnRate(project.id, Number(e.target.value))} 
+              className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-emerald-400 outline-none text-sm font-mono font-bold focus:border-emerald-500" />
           </div>
-          <div className="col-span-2 md:col-span-2">
-            <label className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--text-dim)' }}>
-              <span>Tree Depth</span>
-              <span style={{ color: 'var(--accent-blue)' }}>{project.maxDepth}</span>
+          <div className="col-span-2 flex flex-col gap-1.5">
+            <label className="flex justify-between text-[10px] font-black uppercase tracking-widest text-zinc-500">
+              <span>Tree Depth Limit</span> <span className="text-purple-400">{project.maxDepth}</span>
             </label>
-            <input type="range" min={1} max={30} value={project.maxDepth}
-              onChange={(e) => setMaxDepth(project.id, Number(e.target.value))} className="w-full" />
-            <div className="flex justify-between text-[9px] mt-0.5" style={{ color: 'var(--text-dim)' }}>
-              <span>1</span><span>15</span><span>30</span>
-            </div>
+            <input type="range" min={1} max={30} value={project.maxDepth} onChange={(e) => setMaxDepth(project.id, Number(e.target.value))} className="w-full mt-2 accent-purple-500" />
           </div>
         </div>
-      )}
-
-      {/* ── CONTENT ── */}
-      <div className="flex-1 overflow-hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom, 48px)' }}>
-        {/* Tree tab */}
-        {activeTab === 'tree' && (
-          <ReactFlow
-            nodes={nodes} edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            nodeTypes={nodeTypes}
-            fitView
-            minZoom={0.04}
-            style={{ background: 'var(--bg-base)' }}
-          >
-            <Background color="#1a3050" gap={28} size={1.5} />
-            <Controls />
-          </ReactFlow>
-        )}
-        {activeTab === 'stock' && (
-          <div className="h-full overflow-auto">
-            <StockTab project={project} itemsData={itemsData} recipesData={recipesData} />
-          </div>
-        )}
-        {activeTab === 'harvest' && (
-          <div className="h-full overflow-auto">
-            <HarvestTab project={project} itemsData={itemsData} />
-          </div>
-        )}
-        {activeTab === 'stats' && (
-          <div className="h-full overflow-auto">
-            <StatsTab project={project} itemsData={itemsData} recipesData={recipesData} />
-          </div>
-        )}
       </div>
 
-      {/* ── MOBILE BOTTOM TAB BAR ── */}
+      <div className="flex-1 overflow-hidden relative bg-[#09090b]">
+        {activeTab === 'tree' && (
+          <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} nodeTypes={nodeTypes} fitView minZoom={0.04}>
+            <Background color="#27272a" gap={32} size={1.5} />
+            <Controls className="bg-zinc-900 border-zinc-800 fill-purple-500 mb-16 md:mb-4 shadow-xl" />
+          </ReactFlow>
+        )}
+        {activeTab === 'stock' && <div className="h-full overflow-y-auto"><StockTab project={project} itemsData={itemsData} recipesData={recipesData} /></div>}
+        {activeTab === 'harvest' && <div className="h-full overflow-y-auto"><HarvestTab project={project} itemsData={itemsData} /></div>}
+        {activeTab === 'stats' && <div className="h-full overflow-y-auto"><StatsTab project={project} itemsData={itemsData} recipesData={recipesData} /></div>}
+      </div>
+
       <div className="mobile-tabbar">
         {tabs.map((t) => (
-          <button key={t.id} className={`mob-tab ${activeTab === t.id ? 'active' : ''}`}
-            onClick={() => setActiveTab(t.id)}>
-            {t.icon}
-            <span>{t.label}</span>
+          <button key={t.id} className={`mob-tab ${activeTab === t.id ? 'active' : ''}`} onClick={() => setActiveTab(t.id)}>
+            {t.icon} <span className="mt-1">{t.label}</span>
           </button>
         ))}
       </div>
