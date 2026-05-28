@@ -128,13 +128,36 @@ const getMaxDrop = (id: number) => TREE_MAX_DROPS[id] ?? 4;
 function fmt(n: number) { return n >= 1000 ? n.toLocaleString() : String(n); }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// PERBAIKAN: AUTO-PARSING HITS & STRING FAILSAFE
+// ──────────────────────────────────────────────────────────────────────────────
+function getActualHits(item: any) {
+  if (!item) return 4;
+  
+  // Deteksi properti dari JSON (beberapa JSON menggunakan 'hits', yang lain 'breakHits')
+  const rawValue = item.breakHits !== undefined ? item.breakHits : item.hits;
+  
+  // Paksa ubah menjadi Number, apapun tipe datanya sebelumnya (String/Number)
+  const num = Number(rawValue);
+  
+  // Jika hasilnya NaN atau 0, kembalikan default 4 hit (24 durability)
+  if (isNaN(num) || num <= 0) return 4;
+  
+  // Growtopia menyimpan Total Durability. 1 pukulan = 6 Damage.
+  // Jadi kita harus bagi dengan 6 agar mendapat angka 'Hit' yang sesungguhnya.
+  if (num >= 6) {
+    return Math.ceil(num / 6);
+  }
+  
+  return num;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // SEED LOOKUP & AUTO-CORRECTION BUG FIX
 // ──────────────────────────────────────────────────────────────────────────────
 function getRecipe(id: number, itemsData: Record<number, any>, recipesData: Record<number, [number, number]>) {
   let recipe = recipesData[id];
   const item = itemsData[id];
   
-  // 1. Fallback jika Target adalah Seed, gunakan resep Block (id - 1)
   if (!recipe && item && item.name.toLowerCase().endsWith(' seed') && recipesData[id - 1]) {
     recipe = recipesData[id - 1];
   }
@@ -142,17 +165,13 @@ function getRecipe(id: number, itemsData: Record<number, any>, recipesData: Reco
   if (recipe) {
     let [i1, i2] = recipe;
     
-    // 2. AUTO-CORRECT: Mencegah Magic Egg tertukar menjadi Lattice Background
-    // Karena Splicables.txt merekam Magic Egg sebagai 611, padahal items.json merekamnya beda.
     if (i1 === 611 || i2 === 611 || i1 === 612 || i2 === 612) {
        const itemName = item ? item.name.toLowerCase() : '';
        const isPastelOrEggRecipe = itemName.includes('pastel') || itemName.includes('bunny') || itemName.includes('hippie') || itemName.includes('wicker');
        
        if (i1 === 611 || i2 === 611 || isPastelOrEggRecipe) {
-         // Cari ID sebenarnya dari Magic Egg di itemsData
          const magicEggObj = Object.values(itemsData).find((i: any) => i.name.toLowerCase() === 'magic egg');
          if (magicEggObj) {
-           // Ganti ID yang salah (611/612) dengan ID Magic Egg yang sebenarnya dari database items.json
            if (i1 === 611 || (isPastelOrEggRecipe && i1 === 612)) i1 = magicEggObj.itemID;
            if (i2 === 611 || (isPastelOrEggRecipe && i2 === 612)) i2 = magicEggObj.itemID;
          }
@@ -183,7 +202,7 @@ function generateTree(
     const uid = parentUid ? `${parentUid}-${direction}-${id}` : `root-${id}`;
     const stock = project.currentStock[id] ?? 0;
     const actualNeeded = Math.max(0, amountNeeded - stock);
-    const item = itemsData[id] ?? { name: `#${id}`, rarity: 0, itemID: id, growTime: 0, breakHits: 4 };
+    const item = itemsData[id] ?? { name: `#${id}`, rarity: 0, itemID: id, growTime: 0, breakHits: 24 };
     const maxDrop = getMaxDrop(id);
 
     const data = { id, uid, depth, isBase, isTruncated, amountNeeded, actualNeeded, stock, item, farmable: isFarmable(item), maxDrop };
@@ -332,7 +351,7 @@ function StockTab({ project, itemsData, recipesData }: any) {
 
   const sorted = useMemo(() => Object.entries(requirements).map(([id, total]) => {
       const itemId = Number(id);
-      const item = itemsData[itemId] ?? { name: `#${itemId}`, rarity: 0, growTime: 0, breakHits: 4 };
+      const item = itemsData[itemId] ?? { name: `#${itemId}`, rarity: 0, growTime: 0, breakHits: 24 };
       const stock = project.currentStock[itemId] ?? 0;
       const deficit = Math.max(0, (total as number) - stock);
       return { itemId, item, total: total as number, stock, deficit };
@@ -572,13 +591,13 @@ function StatsTab({ project, itemsData, recipesData }: any) {
 
   const baseEntries = Object.entries(requirements).map(([id, total]) => {
     const itemId = Number(id);
-    const item = itemsData[itemId] ?? { name: `#${itemId}`, growTime: 0, breakHits: 4 };
+    const item = itemsData[itemId] ?? { name: `#${itemId}`, growTime: 0, breakHits: 24 };
     const stock = project.currentStock[itemId] ?? 0;
     return { itemId, item, total: total as number, stock };
   });
 
   const totalBaseSeeds   = baseEntries.reduce((s, r) => s + r.total, 0);
-  const totalHits        = baseEntries.reduce((s, r) => s + r.total * (r.item.breakHits || 4), 0);
+  const totalHits        = baseEntries.reduce((s, r) => s + r.total * getActualHits(r.item), 0);
   const totalStocked     = baseEntries.reduce((s, r) => s + r.stock, 0);
   const deficit          = Math.max(0, totalBaseSeeds - totalStocked);
 
@@ -624,13 +643,13 @@ function StatsTab({ project, itemsData, recipesData }: any) {
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-bold text-zinc-200 truncate">{item.name}</div>
                 <div className="flex gap-2 mt-1">
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono"><Hammer size={8} className="inline mr-1 -mt-0.5"/> {item.breakHits || 4}</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono"><Hammer size={8} className="inline mr-1 -mt-0.5"/> {getActualHits(item)} hits/item</span>
                   {isFarmable(item) ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950/50 text-emerald-400">Farmable</span> : <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-950/50 text-red-400">Seed Loss</span>}
                 </div>
               </div>
               <div className="text-right">
                 <div className="font-mono text-sm font-bold text-purple-400">{fmt(total)}</div>
-                <div className="font-mono text-[9px] text-zinc-500 mt-0.5">Total: {fmt(total * (item.breakHits || 4))} hits</div>
+                <div className="font-mono text-[9px] text-zinc-500 mt-0.5">Total: {fmt(total * getActualHits(item))} hits</div>
               </div>
             </div>
           ))}
@@ -644,7 +663,7 @@ function StatsTab({ project, itemsData, recipesData }: any) {
 // MAIN COMPONENT EXPORT
 // ──────────────────────────────────────────────────────────────────────────────
 export default function MassingTree({ project, itemsData, recipesData }: any) {
-  const { setMaxDepth, setTargetAmount, setSeedReturnRate, projects, loadData } = useStore();
+  const { setMaxDepth, setTargetAmount, setSeedReturnRate } = useStore();
   const [activeTab, setActiveTab] = useState<'tree' | 'stock' | 'harvest' | 'stats'>('tree');
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -660,19 +679,6 @@ export default function MassingTree({ project, itemsData, recipesData }: any) {
     setEdges(calcEdges);
   }, [calcNodes, calcEdges, setNodes, setEdges]);
 
-  const [saveToast, setSaveToast] = useState(false);
-  useEffect(() => {
-    if (!projects || projects.length === 0) return;
-
-    const timer = setTimeout(() => {
-      localStorage.setItem('growmass_autosave_backup', JSON.stringify(projects));
-      setSaveToast(true);
-      setTimeout(() => setSaveToast(false), 2000); 
-    }, 1500); 
-    
-    return () => clearTimeout(timer);
-  }, [projects]);
-
   const targetName = itemsData[project.targetId]?.name ?? `#${project.targetId}`;
   const tabs = [
     { id: 'tree' as const,    icon: <TreePine size={18} />,  label: 'Tree' },
@@ -685,10 +691,6 @@ export default function MassingTree({ project, itemsData, recipesData }: any) {
     <div className="relative flex flex-col w-full h-full bg-black text-zinc-200 font-sans overflow-hidden">
       <style>{INJECTED_CSS}</style>
       
-      <div className={`absolute top-20 left-1/2 -translate-x-1/2 z-50 bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg transition-all duration-300 flex items-center gap-2 ${saveToast ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'}`}>
-        <Save size={14} /> Auto-Saved
-      </div>
-
       <div className="glass-panel flex items-center justify-between px-4 md:px-6 py-3 z-20 shrink-0">
         <div className="min-w-0 mr-4">
           <div className="font-black text-base truncate text-white">{project.name}</div>
