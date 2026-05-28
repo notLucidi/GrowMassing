@@ -128,22 +128,25 @@ const getMaxDrop = (id: number) => TREE_MAX_DROPS[id] ?? 4;
 function fmt(n: number) { return n >= 1000 ? n.toLocaleString() : String(n); }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// PERBAIKAN: AUTO-PARSING HITS & STRING FAILSAFE
+// PERBAIKAN: DETEKSI HIT BLOCK vs SEED
 // ──────────────────────────────────────────────────────────────────────────────
-function getActualHits(item: any) {
+function getActualHits(item: any, id: number, itemsData: Record<number, any>) {
   if (!item) return 4;
   
-  // Deteksi properti dari JSON (beberapa JSON menggunakan 'hits', yang lain 'breakHits')
-  const rawValue = item.breakHits !== undefined ? item.breakHits : item.hits;
+  let blockItem = item;
   
-  // Paksa ubah menjadi Number, apapun tipe datanya sebelumnya (String/Number)
+  // Jika item adalah Seed, kita ambil "Darah/Durability" dari Block-nya (ID - 1)
+  // karena Seed di items.dat seringkali di-set ngawur ke 120 (20 hit)
+  if (item.name && item.name.toLowerCase().endsWith(' seed') && itemsData[id - 1]) {
+    blockItem = itemsData[id - 1];
+  }
+
+  const rawValue = blockItem.breakHits !== undefined ? blockItem.breakHits : blockItem.hits;
   const num = Number(rawValue);
   
-  // Jika hasilnya NaN atau 0, kembalikan default 4 hit (24 durability)
   if (isNaN(num) || num <= 0) return 4;
   
-  // Growtopia menyimpan Total Durability. 1 pukulan = 6 Damage.
-  // Jadi kita harus bagi dengan 6 agar mendapat angka 'Hit' yang sesungguhnya.
+  // Konversi Health/Durability menjadi jumlah pukulan (1 pukulan Fist = 6 Damage)
   if (num >= 6) {
     return Math.ceil(num / 6);
   }
@@ -597,7 +600,7 @@ function StatsTab({ project, itemsData, recipesData }: any) {
   });
 
   const totalBaseSeeds   = baseEntries.reduce((s, r) => s + r.total, 0);
-  const totalHits        = baseEntries.reduce((s, r) => s + r.total * getActualHits(r.item), 0);
+  const totalHits        = baseEntries.reduce((s, r) => s + r.total * getActualHits(r.item, r.itemId, itemsData), 0);
   const totalStocked     = baseEntries.reduce((s, r) => s + r.stock, 0);
   const deficit          = Math.max(0, totalBaseSeeds - totalStocked);
 
@@ -643,13 +646,13 @@ function StatsTab({ project, itemsData, recipesData }: any) {
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-bold text-zinc-200 truncate">{item.name}</div>
                 <div className="flex gap-2 mt-1">
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono"><Hammer size={8} className="inline mr-1 -mt-0.5"/> {getActualHits(item)} hits/item</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono"><Hammer size={8} className="inline mr-1 -mt-0.5"/> {getActualHits(item, itemId, itemsData)} hits/item</span>
                   {isFarmable(item) ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950/50 text-emerald-400">Farmable</span> : <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-950/50 text-red-400">Seed Loss</span>}
                 </div>
               </div>
               <div className="text-right">
                 <div className="font-mono text-sm font-bold text-purple-400">{fmt(total)}</div>
-                <div className="font-mono text-[9px] text-zinc-500 mt-0.5">Total: {fmt(total * getActualHits(item))} hits</div>
+                <div className="font-mono text-[9px] text-zinc-500 mt-0.5">Total: {fmt(total * getActualHits(item, itemId, itemsData))} hits</div>
               </div>
             </div>
           ))}
@@ -690,7 +693,7 @@ export default function MassingTree({ project, itemsData, recipesData }: any) {
   return (
     <div className="relative flex flex-col w-full h-full bg-black text-zinc-200 font-sans overflow-hidden">
       <style>{INJECTED_CSS}</style>
-      
+
       <div className="glass-panel flex items-center justify-between px-4 md:px-6 py-3 z-20 shrink-0">
         <div className="min-w-0 mr-4">
           <div className="font-black text-base truncate text-white">{project.name}</div>
