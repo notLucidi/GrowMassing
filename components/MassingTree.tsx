@@ -128,19 +128,39 @@ const getMaxDrop = (id: number) => TREE_MAX_DROPS[id] ?? 4;
 function fmt(n: number) { return n >= 1000 ? n.toLocaleString() : String(n); }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// SEED LOOKUP (CLEAN METHOD)
+// SEED LOOKUP & AUTO-CORRECTION BUG FIX
 // ──────────────────────────────────────────────────────────────────────────────
 function getRecipe(id: number, itemsData: Record<number, any>, recipesData: Record<number, [number, number]>) {
-  // Cek langsung ke database Splicables
-  if (recipesData[id]) return recipesData[id];
-  
-  // Jika tidak ditemukan dan namanya eksplisit ' Seed', barulah kita meminjam resep dari (ID - 1)
+  let recipe = recipesData[id];
   const item = itemsData[id];
-  if (item && item.name.toLowerCase().endsWith(' seed') && recipesData[id - 1]) {
-    return recipesData[id - 1];
+  
+  // 1. Fallback jika Target adalah Seed, gunakan resep Block (id - 1)
+  if (!recipe && item && item.name.toLowerCase().endsWith(' seed') && recipesData[id - 1]) {
+    recipe = recipesData[id - 1];
   }
 
-  // Jika bukan 'Seed' (seperti Magic Egg yang merupakan item khusus), kembalikan null agar menjadi Base Item.
+  if (recipe) {
+    let [i1, i2] = recipe;
+    
+    // 2. AUTO-CORRECT: Mencegah Magic Egg tertukar menjadi Lattice Background
+    // Karena Splicables.txt merekam Magic Egg sebagai 611, padahal items.json merekamnya beda.
+    if (i1 === 611 || i2 === 611 || i1 === 612 || i2 === 612) {
+       const itemName = item ? item.name.toLowerCase() : '';
+       const isPastelOrEggRecipe = itemName.includes('pastel') || itemName.includes('bunny') || itemName.includes('hippie') || itemName.includes('wicker');
+       
+       if (i1 === 611 || i2 === 611 || isPastelOrEggRecipe) {
+         // Cari ID sebenarnya dari Magic Egg di itemsData
+         const magicEggObj = Object.values(itemsData).find((i: any) => i.name.toLowerCase() === 'magic egg');
+         if (magicEggObj) {
+           // Ganti ID yang salah (611/612) dengan ID Magic Egg yang sebenarnya dari database items.json
+           if (i1 === 611 || (isPastelOrEggRecipe && i1 === 612)) i1 = magicEggObj.itemID;
+           if (i2 === 611 || (isPastelOrEggRecipe && i2 === 612)) i2 = magicEggObj.itemID;
+         }
+       }
+    }
+    
+    return [i1, i2] as [number, number];
+  }
   return null;
 }
 
@@ -164,8 +184,9 @@ function generateTree(
     const stock = project.currentStock[id] ?? 0;
     const actualNeeded = Math.max(0, amountNeeded - stock);
     const item = itemsData[id] ?? { name: `#${id}`, rarity: 0, itemID: id, growTime: 0, breakHits: 4 };
+    const maxDrop = getMaxDrop(id);
 
-    const data = { id, uid, depth, isBase, isTruncated, amountNeeded, actualNeeded, stock, item, farmable: isFarmable(item) };
+    const data = { id, uid, depth, isBase, isTruncated, amountNeeded, actualNeeded, stock, item, farmable: isFarmable(item), maxDrop };
 
     let leftW = 0, rightW = 0;
     if (!isBase && !isTruncated) {
