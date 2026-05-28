@@ -78,7 +78,7 @@ function isFarmable(item: any) { return item && item.growTime > 0; }
 function fmt(n: number) { return n >= 1000 ? n.toLocaleString() : String(n); }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// TREE GENERATION
+// TREE GENERATION (Fixed Seed Lookup Bug)
 // ──────────────────────────────────────────────────────────────────────────────
 const X_GAP = 340;
 const Y_GAP = 240;
@@ -90,7 +90,8 @@ function generateTree(
   const edges: Edge[] = [];
 
   function traverse(id: number, depth: number, x: number, y: number, parentUid: string | null, direction: 'L' | 'R' | null, amountNeeded: number): number {
-    const recipe = recipesData[id];
+    // FIX: Gunakan [id - 1] agar jika Seed yang dicari, sistem akan membaca resep Block-nya.
+    const recipe = recipesData[id] || recipesData[id - 1]; 
     const isBase = !recipe;
     const isTruncated = !!recipe && depth >= project.maxDepth;
     const uid = parentUid ? `${parentUid}-${direction}-${id}` : `root-${id}`;
@@ -126,7 +127,8 @@ function generateTree(
 function getBaseRequirements(targetId: number, targetAmount: number, maxDepth: number, recipesData: Record<number, [number, number]>, seedReturnRate: number) {
   const req: Record<number, number> = {};
   function walk(id: number, depth: number, amount: number) {
-    const recipe = recipesData[id];
+    // FIX BUG: Fallback pencarian resep Block
+    const recipe = recipesData[id] || recipesData[id - 1]; 
     if (!recipe || depth >= maxDepth) { req[id] = (req[id] ?? 0) + amount; return; }
     const [i1, i2] = recipe;
     const splices = Math.ceil(amount / seedReturnRate);
@@ -139,7 +141,8 @@ function getBaseRequirements(targetId: number, targetAmount: number, maxDepth: n
 function countSplices(targetId: number, targetAmount: number, maxDepth: number, recipesData: Record<number, [number, number]>, seedReturnRate: number) {
   let total = 0;
   function walk(id: number, depth: number, amount: number) {
-    const recipe = recipesData[id];
+    // FIX BUG: Fallback pencarian resep Block
+    const recipe = recipesData[id] || recipesData[id - 1];
     if (!recipe || depth >= maxDepth) return;
     total += Math.ceil(amount / seedReturnRate);
     const [i1, i2] = recipe;
