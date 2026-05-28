@@ -1,15 +1,25 @@
 import { create } from 'zustand';
 
+export interface HarvestSettings {
+  harvestTargetId: number | null;
+  numTrees: number;
+  magplant: boolean;
+  goldenBooster: boolean;
+  farmerRole: boolean;
+  ringOfFlowers: boolean;
+}
+
 export interface ProjectState {
   id: string;
   name: string;
   targetId: number;
   targetAmount: number;
   maxDepth: number;
-  seedReturnRate: number; // Menentukan seed loss
+  seedReturnRate: number;
   doneNodes: Record<string, boolean>;
   notes: Record<string, string>;
   currentStock: Record<string, number>;
+  harvestSettings: HarvestSettings;
 }
 
 interface AppState {
@@ -29,6 +39,7 @@ interface AppState {
   setMaxDepth: (projectId: string, depth: number) => void;
   setTargetAmount: (projectId: string, amount: number) => void;
   setSeedReturnRate: (projectId: string, rate: number) => void;
+  updateHarvestSettings: (projectId: string, settings: Partial<HarvestSettings>) => void;
 
   saveData: () => void;
   loadData: (data: any) => void;
@@ -49,15 +60,24 @@ export const useStore = create<AppState>((set, get) => ({
       targetId,
       targetAmount: 1000,
       maxDepth: 15,
-      seedReturnRate: 0.8, // Default 0.8 (20% Seed Loss untuk Unfarmable)
+      seedReturnRate: 0.8,
       doneNodes: {},
       notes: {},
-      currentStock: {}
+      currentStock: {},
+      harvestSettings: {
+        harvestTargetId: null,
+        numTrees: 1000,
+        magplant: false,
+        goldenBooster: false,
+        farmerRole: false,
+        ringOfFlowers: false,
+      }
     };
     return { projects: [...state.projects, newProj], activeProjectId: newProj.id };
   }),
 
   setActiveProject: (id) => set({ activeProjectId: id }),
+  
   deleteProject: (id) => set((state) => ({ 
     projects: state.projects.filter(p => p.id !== id),
     activeProjectId: state.activeProjectId === id ? (state.projects.length > 1 ? state.projects[0].id : null) : state.activeProjectId
@@ -87,6 +107,13 @@ export const useStore = create<AppState>((set, get) => ({
     projects: state.projects.map(p => p.id === projectId ? { ...p, seedReturnRate: rate } : p)
   })),
 
+  updateHarvestSettings: (projectId, settings) => set((state) => ({
+    projects: state.projects.map(p => p.id === projectId ? { 
+      ...p, 
+      harvestSettings: { ...p.harvestSettings, ...settings } 
+    } : p)
+  })),
+
   saveData: () => {
     const { projects } = get();
     const blob = new Blob([JSON.stringify(projects, null, 2)], { type: 'application/json' });
@@ -97,5 +124,18 @@ export const useStore = create<AppState>((set, get) => ({
     a.click();
   },
 
-  loadData: (data) => set({ projects: data, activeProjectId: data.length > 0 ? data[0].id : null })
+  loadData: (data) => set(() => {
+    const migratedData = data.map((p: any) => ({
+      ...p,
+      harvestSettings: p.harvestSettings || {
+        harvestTargetId: null,
+        numTrees: 1000,
+        magplant: false,
+        goldenBooster: false,
+        farmerRole: false,
+        ringOfFlowers: false,
+      }
+    }));
+    return { projects: migratedData, activeProjectId: migratedData.length > 0 ? migratedData[0].id : null };
+  })
 }));
