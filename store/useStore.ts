@@ -3,10 +3,16 @@ import { create } from 'zustand';
 export interface HarvestSettings {
   harvestTargetId: number | null;
   numTrees: number;
-  magplant: boolean;
-  goldenBooster: boolean;
-  farmerRole: boolean;
-  ringOfFlowers: boolean;
+  // Harvest Modifiers
+  hos: boolean;
+  fuel: boolean;
+  dcs: boolean;
+  // Breaking Modifiers
+  ancesBlue: boolean;
+  builder: boolean;
+  ancesRed: boolean;
+  gemini: boolean;
+  farmer: boolean;
 }
 
 export interface ProjectState {
@@ -67,10 +73,8 @@ export const useStore = create<AppState>((set, get) => ({
       harvestSettings: {
         harvestTargetId: null,
         numTrees: 1000,
-        magplant: false,
-        goldenBooster: false,
-        farmerRole: false,
-        ringOfFlowers: false,
+        hos: false, fuel: false, dcs: false,
+        ancesBlue: false, builder: false, ancesRed: false, gemini: false, farmer: false
       }
     };
     return { projects: [...state.projects, newProj], activeProjectId: newProj.id };
@@ -127,13 +131,17 @@ export const useStore = create<AppState>((set, get) => ({
   loadData: (data) => set(() => {
     const migratedData = data.map((p: any) => ({
       ...p,
-      harvestSettings: p.harvestSettings || {
-        harvestTargetId: null,
-        numTrees: 1000,
-        magplant: false,
-        goldenBooster: false,
-        farmerRole: false,
-        ringOfFlowers: false,
+      harvestSettings: {
+        harvestTargetId: p.harvestSettings?.harvestTargetId ?? null,
+        numTrees: p.harvestSettings?.numTrees ?? 1000,
+        hos: p.harvestSettings?.hos ?? false,
+        fuel: p.harvestSettings?.fuel ?? false,
+        dcs: p.harvestSettings?.dcs ?? false,
+        ancesBlue: p.harvestSettings?.ancesBlue ?? false,
+        builder: p.harvestSettings?.builder ?? false,
+        ancesRed: p.harvestSettings?.ancesRed ?? false,
+        gemini: p.harvestSettings?.gemini ?? false,
+        farmer: p.harvestSettings?.farmer ?? false,
       }
     }));
     return { projects: migratedData, activeProjectId: migratedData.length > 0 ? migratedData[0].id : null };
