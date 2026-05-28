@@ -68,7 +68,7 @@ const X_GAP = 340;
 const Y_GAP = 240;
 
 function generateTree(
-  project: ProjectState, recipesData: Record<number, [number, number]>, itemsData: Record<number, any>, chiData: Record<number, string>
+  project: ProjectState, recipesData: Record<number, [number, number]>, itemsData: Record<number, any>, chiData: Record<number, string> = {}
 ) {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
@@ -83,7 +83,7 @@ function generateTree(
     const item = itemsData[id] ?? { name: `#${id}`, rarity: 0, itemID: id, growTime: 0, breakHits: 4 };
     const maxDrop = getMaxDrop(id);
 
-    const data = { id, uid, depth, isBase, isTruncated, amountNeeded, actualNeeded, stock, item, farmable: isFarmable(item), chi: chiData[id], maxDrop };
+    const data = { id, uid, depth, isBase, isTruncated, amountNeeded, actualNeeded, stock, item, farmable: isFarmable(item), chi: chiData ? chiData[id] : undefined, maxDrop };
 
     let leftW = 0, rightW = 0;
     if (!isBase && !isTruncated) {
@@ -493,7 +493,7 @@ function StatsTab({ project, itemsData, recipesData }: any) {
 // ──────────────────────────────────────────────────────────────────────────────
 // MAIN COMPONENT EXPORT
 // ──────────────────────────────────────────────────────────────────────────────
-export default function MassingTree({ project, itemsData, recipesData, chiData }: any) {
+export default function MassingTree({ project, itemsData, recipesData, chiData = {} }: any) {
   const { setMaxDepth, setTargetAmount, setSeedReturnRate, projects } = useStore();
   const [activeTab, setActiveTab] = useState<'tree' | 'stock' | 'harvest' | 'stats'>('tree');
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
