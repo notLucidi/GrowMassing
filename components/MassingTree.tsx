@@ -91,7 +91,7 @@ const FARMABLE_NAMES = new Set([
   "sugar cane", "surgical block", "surgical background", "table lamp", "tangram block", "texas limestone",
   "treasure chest", "venus guytrap", "viney block", "viney wallpaper", "wall like an egyptian",
   "weeping willow branch", "weeping willow foliage", "wheat", "white block", "window", "wood block",
-  "wooden background", "wooden platform", "wooden window", "writing desk", "xenoid block", "yellow block"
+  "wooden background", "wooden platform", "wooden window", "writing desk", "xenoid block", "yellow block", "door"
 ]);
 
 function isFarmable(item: any) {
